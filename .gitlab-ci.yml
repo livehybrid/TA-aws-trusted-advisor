@@ -23,7 +23,7 @@ deploy:
       name: registry.gitlab.com/deviosec/containers/release:latest
       entrypoint: ["/bin/sh", "-i", "-c"]
     script:
-        - curl https://dash.bowl-online.co.uk/git.py -o /opt/gitlab-api/main.py
+        - curl https://gist.githubusercontent.com/livehybrid/f8e892d358fd9f9fa2dd97916516b5dd/raw/888b4e97f3751a76e4c24dc49b6d65301b166e05/gitlab-release.py -o /opt/gitlab-api/main.py
         - python3 /opt/gitlab-api/main.py
     only:
         - tags
