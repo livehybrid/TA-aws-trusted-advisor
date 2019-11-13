@@ -123,7 +123,7 @@ $(BUILD_DIR)/$(MAIN_APP)/app.manifest: $(ALL_DIRS)\
 															$(BUILD_DIR)/$(MAIN_APP)/$(LICENSE_FILE) \
 															$(BUILD_DIR)/$(MAIN_APP)/default/app.conf \
 															$(APPS_DIR)/$(MAIN_APP)/app.manifest
-
+	mkdir -p $(BUILD_DIR)/$(MAIN_APP)/default/
 	cp $(APPS_DIR)/$(MAIN_APP)/app.manifest $(BUILD_DIR)/$(MAIN_APP)/app.manifest
 	slim generate-manifest --update $(BUILD_DIR)/$(MAIN_APP) | sponge $(BUILD_DIR)/$(MAIN_APP)/app.manifest
 	jq '.info.title="$(MAIN_LABEL)"'  $(BUILD_DIR)/$(MAIN_APP)/app.manifest | sponge $(BUILD_DIR)/$(MAIN_APP)/app.manifest
