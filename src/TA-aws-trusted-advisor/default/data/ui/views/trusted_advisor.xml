@@ -3,7 +3,7 @@
   <description>Results from the latest Trusted Advisor Checks.</description>
   <search id="mainBase">
     <query>
-      sourcetype=aws:trustedadvisor source=$account$ | lookup trusted_advisor_checks.csv id AS check_id OUTPUT
+      `trusted-advisor-index` sourcetype=aws:trustedadvisor source=$account$ | lookup trusted_advisor_checks.csv id AS check_id OUTPUT
 | dedup name |  stats latest(_time) as _time by resources_processed,resources_flagged,resources_ignored, resources_suppressed  name
     </query>
     <earliest>$time.earliest$</earliest>
