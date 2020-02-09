@@ -19,9 +19,9 @@
 
 # -- Project information -----------------------------------------------------
 
-project = u'NAME OF YOUR APP'
-copyright = u'2019, NHS Digital/NHS Digital'
-author = u'IMDD Team/NHS Digital'
+project = u'AWS Trusted Advisor'
+copyright = u'2020, William Searle/NHS Digital'
+author = u'William Searle/NHS Digital'
 
 # The short X.Y version
 version = u''

@@ -1,0 +1,159 @@
+<form script="html_render.js">
+  <label>Trusted Advisor</label>
+  <description>Results from the latest Trusted Advisor Checks.</description>
+  <search id="mainBase">
+    <query>
+      sourcetype=aws:trustedadvisor source=$account$ | lookup trusted_advisor_checks.csv id AS check_id OUTPUT
+| dedup name |  stats latest(_time) as _time by resources_processed,resources_flagged,resources_ignored, resources_suppressed  name
+    </query>
+    <earliest>$time.earliest$</earliest>
+    <latest>$time.latest$</latest>
+  </search>
+  <fieldset submitButton="true" autoRun="true">
+    <input type="time" token="time" searchWhenChanged="true">
+      <label></label>
+      <default>
+        <earliest>-30d@d</earliest>
+        <latest>now</latest>
+      </default>
+    </input>
+    <input type="dropdown" token="account" searchWhenChanged="true">
+      <label>Account</label>
+      <fieldForLabel>source</fieldForLabel>
+      <fieldForValue>source</fieldForValue>
+      <search>
+        <query>| tstats count  where sourcetype="aws:trustedadvisor" by source</query>
+        <earliest>-30d@d</earliest>
+        <latest>now</latest>
+      </search>
+      <choice value="*">All</choice>
+      <initialValue>*</initialValue>
+    </input>
+  </fieldset>
+  <row>
+    <panel>
+      <single>
+        <search base="mainBase">
+          <query>| stats latest(_time) as _time by resources_processed, name 
+| stats sum(resources_processed) AS total_processed</query>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+        <option name="underLabel">Total Resources Processed</option>
+      </single>
+    </panel>
+    <panel>
+      <single>
+        <search base="mainBase">
+          <query>| stats latest(_time) as _time by resources_flagged, name 
+| stats sum(resources_flagged) AS resources_flagged</query>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="rangeColors">["0x53a051","0x0877a6","0xf8be34","0xf1813f","0xdc4e41"]</option>
+        <option name="refresh.display">progressbar</option>
+        <option name="underLabel">Resources Flagged</option>
+      </single>
+    </panel>
+    <panel>
+      <single>
+        <search base="mainBase">
+          <query>| stats latest(_time) as _time by resources_ignored, name 
+| stats sum(resources_ignored) AS resources_ignored</query>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+        <option name="underLabel">Resources Ignored</option>
+      </single>
+    </panel>
+    <panel>
+      <single>
+        <search base="mainBase">
+          <query>| stats latest(_time) as _time by resources_suppressed, name 
+| stats sum(resources_suppressed) AS resources_suppressed</query>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="rangeColors">["0x53a051","0x0877a6","0xf8be34","0xf1813f","0xdc4e41"]</option>
+        <option name="refresh.display">progressbar</option>
+        <option name="underLabel">Resources Suppressed</option>
+      </single>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <single>
+        <search>
+          <query>sourcetype=aws:trustedadvisor source=$account$ | lookup trusted_advisor_checks.csv id AS check_id OUTPUT
+| dedup name | stats latest(_time) as _time by estimated_monthly_savings, name 
+| stats sum(estimated_monthly_savings) as estimated_monthly_savings
+| eval estimated_monthly_savings="$".tostring(round(estimated_monthly_savings, 2),"commas")</query>
+          <earliest>$time.earliest$</earliest>
+          <latest>$time.latest$</latest>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+        <option name="underLabel">Total Estimated Monthly Savings</option>
+      </single>
+    </panel>
+  </row>
+  <row>
+    <panel depends="$check_id_tok$,$category_tok$,$name_tok$">
+      <title>Details</title>
+      <html>
+        <div id="ta_description">
+        </div>
+      </html>
+      <table id="advisor_details">
+        <search>
+          <query>sourcetype=aws:trustedadvisor source=$account$ checkId="$check_id_tok$" 
+| table metadata_html, checkId
+| dedup checkId | makemv metadata_html delim="---" | mvexpand metadata_html
+| rename metadata_html as "Details" 
+|  fields - checkId</query>
+          <earliest>$time.earliest$</earliest>
+          <latest>$time.latest$</latest>
+        </search>
+        <option name="count">10</option>
+        <option name="drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+      </table>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>Overview</title>
+      <table id="overview_table">
+        <search>
+          <query>source=$account$ sourcetype=aws:trustedadvisor | lookup trusted_advisor_checks.csv id AS check_id OUTPUT
+| dedup name | lookup ta_categories.csv underscore AS category OUTPUT clean AS category
+| fillnull estimated_monthly_savings value="0"
+| stats latest(_time) as _time by category, name, resources_flagged, resources_ignored, resources_suppressed, resources_processed, estimated_monthly_savings, checkId, description
+| eval estimated_monthly_savings="$".round(estimated_monthly_savings, 2)
+| sort 0 - resources_flagged, _time 
+|  fields - _time
+| dedup name
+| rename category AS Category, name AS Name, resources_flagged AS "Resources Flagged", resources_ignored AS "Resources Ignored", resources_suppressed AS "Resources Suppressed", resources_processed AS "Resources Processed", estimated_monthly_savings AS "Estimated Monthly Savings"</query>
+          <earliest>$time.earliest$</earliest>
+          <latest>$time.latest$</latest>
+        </search>
+        <option name="count">20</option>
+        <option name="dataOverlayMode">none</option>
+        <option name="drilldown">row</option>
+        <option name="percentagesRow">false</option>
+        <option name="refresh.display">progressbar</option>
+        <option name="rowNumbers">false</option>
+        <option name="totalsRow">false</option>
+        <option name="wrap">true</option>
+        <format type="color" field="Resources Flagged">
+          <colorPalette type="list">[#A2CC3E,#D93F3C]</colorPalette>
+          <scale type="threshold">1</scale>
+        </format>
+        <fields>["Category","Name","Resources Flagged","Resources Ignored","Resources Suppressed","Resources Processed","Estimated Monthly Savings"]</fields>
+        <drilldown>
+          <set token="check_id_tok">$row.checkId$</set>
+          <set token="category_tok">$row.Category$</set>
+          <set token="name_tok">$row.Name$</set>
+        </drilldown>
+      </table>
+    </panel>
+  </row>
+</form>

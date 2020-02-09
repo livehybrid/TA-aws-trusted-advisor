@@ -1,15 +1,14 @@
-MAIN_APP      = CHANGEME_TO_YOUR_APP_ID
+MAIN_APP      = TA-aws-trusted-advisor
 
 #Name of the license file in the root of the repo
 LICENSE_FILE  = license-eula.txt
 LICENSE_URL   = https://www.splunk.com/en_us/legal/splunk-software-license-agreement.html
 
-AUTHOR = CHANGEME_TO_YOUR_NAME
+AUTHOR = William Searle
 COMPANY = NHS Digital
 
-MAIN_DESCRIPTION = CHANGEME_TO_YOUR_APP_DESCRIPTION
-MAIN_LABEL = CHANGEME_TO_YOUR_APP_UI_LABEL
-
+MAIN_DESCRIPTION = AWS Trusted Advisor Aggregator
+MAIN_LABEL = AWS Trusted Advisor
 
 #######################
 # NOT CURRENTLY USED! #
