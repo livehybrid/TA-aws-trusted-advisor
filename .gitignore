@@ -23,7 +23,6 @@ local.meta
 *.spl
 
 # Unknown
-build
 .build
 *.orig.pre41
 
