@@ -95,22 +95,25 @@ def authenticate(helper):
     aws_secret_access_key=helper.get_arg('aws_secret_key')
     aws_session_token=None
     
-            
     role_arn = helper.get_arg('role_arn')
     if role_arn:
-    	audit_sts_client = boto3.client('sts')
-        sts_response = boto3.client('sts').assume_role(
-            RoleArn=role_arn,
-            RoleSessionName="splunk",
-            DurationSeconds=900 #min 900 max inf
-        )
+        try:
+            audit_sts_client = boto3.client('sts')
+            sts_response = boto3.client('sts').assume_role(
+                RoleArn=role_arn,
+                RoleSessionName="splunk",
+                DurationSeconds=900 #min 900 max inf
+            )
 
-        sts_credentials = sts_response['Credentials']
-        aws_access_key_id = sts_credentials['AccessKeyId']
-        aws_secret_access_key = sts_credentials['SecretAccessKey']
-        aws_session_token = sts_credentials['SessionToken']
-        helper.log_debug("Assumed role={}".format(role_arn))
-            
+            sts_credentials = sts_response['Credentials']
+            aws_access_key_id = sts_credentials['AccessKeyId']
+            aws_secret_access_key = sts_credentials['SecretAccessKey']
+            aws_session_token = sts_credentials['SessionToken']
+            helper.log_debug("Assumed role={}".format(role_arn))
+        except:
+            helper.log_debug(role_arn)
+            print("Failed to get session")
+      
     region = 'us-east-1'
     try:
         aws_client = boto3.client(
