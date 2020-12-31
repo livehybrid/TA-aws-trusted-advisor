@@ -13,7 +13,6 @@ from botocore.exceptions import ClientError
 from splunk.clilib import cli_common as cli
 
 
-
 def merge_metadata(result, check_metadata):
     """
     Merging the metadata from checks and description endpoints
@@ -54,7 +53,7 @@ def get_cleaned_metadata_values(result):
     """
     container = []
     for flagged in result:
-        for k_flagged, v_flagged in flagged.iteritems():
+        for k_flagged, v_flagged in flagged.items():
             if k_flagged == 'metadata':
                 if v_flagged[0]:
                     container.append(v_flagged)
