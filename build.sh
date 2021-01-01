@@ -11,7 +11,7 @@ ucc-gen --ta-version="$Version"
                 
 PACKAGE_ID=$(ls output/)
 BUILD_DIR=output/$PACKAGE_ID
-source ~/.venv/bin/activate
+#source ~/.venv/bin/activate
 slim generate-manifest $BUILD_DIR --update >/tmp/app.manifest   || true
 cp  /tmp/app.manifest  $BUILD_DIR/app.manifest
 mkdir -p build/package/splunkbase
