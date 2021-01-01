@@ -12,6 +12,7 @@ build:
     - git config --global user.email "cicd@digital.nhs.uk"
     - git config --global user.name "Gitlab Runner"
   script: |
+    set -x
     sudo chown -R "${USER:-$(id -un)}" .
     sudo apt-get update
     sudo apt-get install -y python2 python-pip python-virtualenv python3 python3.7 python3-pip python3-virtualenv
@@ -19,16 +20,16 @@ build:
     source ~/.venv/bin/activate
     pip install pip==20.2
     pip install -r requirements_dev.txt || true
-    pip install semantic_version==2.6.0
-    sudo apt install npm
-    echo "" > nextRelease.txt
-    npx -p @semantic-release/exec -p semantic-release semantic-release --dry-run --plugins "@semantic-release/commit-analyzer,@semantic-release/exec" --analyzeCommits @semantic-release/commit-analyzer --verifyRelease @semantic-release/exec --verifyReleaseCmd 'echo ${nextRelease.version} > nextRelease.txt'
+#    pip install semantic_version==2.6.0
+#    sudo apt install npm
+    echo "${CI_COMMIT_TAG}" > nextRelease.txt
+#    npx -p @semantic-release/exec -p semantic-release semantic-release --dry-run --plugins "@semantic-release/commit-analyzer,@semantic-release/exec" --analyzeCommits @semantic-release/commit-analyzer --verifyRelease @semantic-release/exec --verifyReleaseCmd 'echo ${nextRelease.version} > nextRelease.txt'
     Version=$(cat nextRelease.txt)
     echo "============"
     echo "$Version"
     echo "============"
-    #source ~/.venv/bin/activate
-    Version="v0.0.1"
+#    source ~/.venv/bin/activate
+#    Version="v0.0.1"
     ucc-gen --ta-version="$Version"
     PACKAGE_ID=$(/bin/ls output/)
     BUILD_DIR=output/$PACKAGE_ID
