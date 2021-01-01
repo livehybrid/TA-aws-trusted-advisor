@@ -1,0 +1,322 @@
+{
+    "meta": {
+        "name": "TA-aws-trusted-advisor",
+        "restRoot": "TA_aws_trusted_advisor",
+        "apiVersion": "3.0.0",
+        "version": "v0.0.1",
+        "displayName": "AWS Trusted Advisor",
+        "schemaVersion": "0.0.1"
+    },
+    "pages": {
+        "configuration": {
+            "title": "Configuration",
+            "tabs": [
+                {
+                    "name": "proxy",
+                    "title": "Proxy",
+                    "options": {
+                        "saveValidator": "function(formData) { if(!formData.proxy_enabled || formData.proxy_enabled === '0') {return true; } if(!formData.proxy_url) { return 'Proxy Host can not be empty'; } if(!formData.proxy_port) { return 'Proxy Port can not be empty'; } return true; }"
+                    },
+                    "entity": [
+                        {
+                            "label": "Enable",
+                            "type": "checkbox",
+                            "field": "proxy_enabled"
+                        },
+                        {
+                            "label": "Proxy Type",
+                            "type": "singleSelect",
+                            "options": {
+                                "disableSearch": true,
+                                "autoCompleteFields": [
+                                    {
+                                        "label": "http",
+                                        "value": "http"
+                                    },
+                                    {
+                                        "label": "socks4",
+                                        "value": "socks4"
+                                    },
+                                    {
+                                        "label": "socks5",
+                                        "value": "socks5"
+                                    }
+                                ]
+                            },
+                            "field": "proxy_type",
+                            "defaultValue": "http"
+                        },
+                        {
+                            "label": "Host",
+                            "type": "text",
+                            "validators": [
+                                {
+                                    "errorMsg": "Max host length is 4096",
+                                    "type": "string",
+                                    "minLength": 0,
+                                    "maxLength": 4096
+                                }
+                            ],
+                            "field": "proxy_url"
+                        },
+                        {
+                            "label": "Port",
+                            "type": "text",
+                            "validators": [
+                                {
+                                    "type": "number",
+                                    "range": [
+                                        1,
+                                        65535
+                                    ]
+                                }
+                            ],
+                            "field": "proxy_port"
+                        },
+                        {
+                            "label": "Username",
+                            "type": "text",
+                            "validators": [
+                                {
+                                    "errorMsg": "Max length of username is 50",
+                                    "type": "string",
+                                    "minLength": 0,
+                                    "maxLength": 50
+                                }
+                            ],
+                            "field": "proxy_username"
+                        },
+                        {
+                            "label": "Password",
+                            "type": "text",
+                            "validators": [
+                                {
+                                    "errorMsg": "Max length of password is 8192",
+                                    "type": "string",
+                                    "minLength": 0,
+                                    "maxLength": 8192
+                                }
+                            ],
+                            "encrypted": true,
+                            "field": "proxy_password"
+                        },
+                        {
+                            "label": "Remote DNS resolution",
+                            "type": "checkbox",
+                            "field": "proxy_rdns"
+                        }
+                    ]
+                },
+                {
+                    "name": "logging",
+                    "title": "Logging",
+                    "entity": [
+                        {
+                            "label": "Log level",
+                            "type": "singleSelect",
+                            "options": {
+                                "disableSearch": true,
+                                "autoCompleteFields": [
+                                    {
+                                        "label": "DEBUG",
+                                        "value": "DEBUG"
+                                    },
+                                    {
+                                        "label": "INFO",
+                                        "value": "INFO"
+                                    },
+                                    {
+                                        "label": "WARNING",
+                                        "value": "WARNING"
+                                    },
+                                    {
+                                        "label": "ERROR",
+                                        "value": "ERROR"
+                                    },
+                                    {
+                                        "label": "CRITICAL",
+                                        "value": "CRITICAL"
+                                    }
+                                ]
+                            },
+                            "field": "loglevel",
+                            "defaultValue": "INFO"
+                        }
+                    ]
+                }
+            ],
+            "description": "Set up your add-on"
+        },
+        "inputs": {
+            "title": "Inputs",
+            "services": [
+                {
+                    "name": "aws_trusted_advisor",
+                    "title": "AWS Trusted Advisor",
+                    "entity": [
+                        {
+                            "label": "Name",
+                            "type": "text",
+                            "validators": [
+                                {
+                                    "errorMsg": "Input Name must start with a letter and followed by alphabetic letters, digits or underscores.",
+                                    "type": "regex",
+                                    "pattern": "^[a-zA-Z]\\w*$"
+                                },
+                                {
+                                    "errorMsg": "Length of input name should be between 1 and 100",
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 100
+                                }
+                            ],
+                            "field": "name",
+                            "help": "Enter a unique name for the data input",
+                            "required": true
+                        },
+                        {
+                            "label": "Interval",
+                            "type": "text",
+                            "validators": [
+                                {
+                                    "errorMsg": "Interval must be an integer.",
+                                    "type": "regex",
+                                    "pattern": "^\\-[1-9]\\d*$|^\\d*$"
+                                }
+                            ],
+                            "field": "interval",
+                            "help": "Time interval of input in seconds.",
+                            "required": true
+                        },
+                        {
+                            "label": "Index",
+                            "type": "singleSelect",
+                            "validators": [
+                                {
+                                    "errorMsg": "Length of index name should be between 1 and 80.",
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 80
+                                }
+                            ],
+                            "field": "index",
+                            "options": {
+                                "endpointUrl": "data/indexes",
+                                "createSearchChoice": true,
+                                "denyList": "^_.*$"
+                            },
+                            "defaultValue": "default",
+                            "required": true
+                        },
+                        {
+                            "label": "AWS Access Key",
+                            "type": "text",
+                            "validators": [
+                                {
+                                    "errorMsg": "Max length of text input is 8192",
+                                    "type": "string",
+                                    "minLength": 0,
+                                    "maxLength": 8192
+                                }
+                            ],
+                            "field": "aws_access_key",
+                            "help": "Optional when running on AWS  - Instance profile used if not specified",
+                            "required": false
+                        },
+                        {
+                            "label": "AWS Secret Key",
+                            "type": "text",
+                            "validators": [
+                                {
+                                    "errorMsg": "Max length of password is 8192",
+                                    "type": "string",
+                                    "minLength": 0,
+                                    "maxLength": 8192
+                                }
+                            ],
+                            "field": "aws_secret_key",
+                            "encrypted": true,
+                            "help": "Optional when running on AWS  - Instance profile used if not specified",
+                            "required": false
+                        },
+                        {
+                            "label": "Role ARN",
+                            "type": "text",
+                            "validators": [
+                                {
+                                    "errorMsg": "Max length of text input is 8192",
+                                    "type": "string",
+                                    "minLength": 0,
+                                    "maxLength": 8192
+                                }
+                            ],
+                            "options": {
+                                "placeholder": "arn:aws:iam::1234567890123:role/myRoleName"
+                            },
+                            "field": "role_arn",
+                            "help": "Optional - Assume the following role to collect data",
+                            "required": false
+                        }
+                    ]
+                }
+            ],
+            "description": "Manage your data inputs",
+            "table": {
+                "actions": [
+                    "edit",
+                    "enable",
+                    "delete",
+                    "clone"
+                ],
+                "header": [
+                    {
+                        "label": "Name",
+                        "field": "name"
+                    },
+                    {
+                        "label": "Interval",
+                        "field": "interval"
+                    },
+                    {
+                        "label": "Index",
+                        "field": "index"
+                    },
+                    {
+                        "label": "Status",
+                        "field": "disabled"
+                    }
+                ],
+                "moreInfo": [
+                    {
+                        "label": "Name",
+                        "field": "name"
+                    },
+                    {
+                        "label": "Interval",
+                        "field": "interval"
+                    },
+                    {
+                        "label": "Index",
+                        "field": "index"
+                    },
+                    {
+                        "label": "Status",
+                        "field": "disabled"
+                    },
+                    {
+                        "label": "AWS Access Key",
+                        "field": "aws_access_key"
+                    },
+                    {
+                        "label": "AWS Secret Key",
+                        "field": "aws_secret_key"
+                    },
+                    {
+                        "label": "Role ARN",
+                        "field": "role_arn"
+                    }
+                ]
+            }
+        }
+    }
+}

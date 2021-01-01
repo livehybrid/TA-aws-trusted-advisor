@@ -6,10 +6,11 @@ echo "============"
 echo "$Version"
 echo "============"
 #source ~/.venv/bin/activate
+Version="v0.0.1"
 ucc-gen --ta-version="$Version"
 
                 
-PACKAGE_ID=$(ls output/)
+PACKAGE_ID=$(/bin/ls output/)
 BUILD_DIR=output/$PACKAGE_ID
 #source ~/.venv/bin/activate
 slim generate-manifest $BUILD_DIR --update >/tmp/app.manifest   || true
