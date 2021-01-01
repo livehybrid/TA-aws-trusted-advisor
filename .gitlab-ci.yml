@@ -20,16 +20,13 @@ build:
     source ~/.venv/bin/activate
     pip install pip==20.2
     pip install -r requirements_dev.txt || true
-#    pip install semantic_version==2.6.0
-#    sudo apt install npm
     echo "${CI_COMMIT_TAG}" > nextRelease.txt
-#    npx -p @semantic-release/exec -p semantic-release semantic-release --dry-run --plugins "@semantic-release/commit-analyzer,@semantic-release/exec" --analyzeCommits @semantic-release/commit-analyzer --verifyRelease @semantic-release/exec --verifyReleaseCmd 'echo ${nextRelease.version} > nextRelease.txt'
     Version=$(cat nextRelease.txt)
     echo "============"
     echo "$Version"
     echo "============"
-#    source ~/.venv/bin/activate
-#    Version="v0.0.1"
+    #source ~/.venv/bin/activate
+    #Version="v0.0.1"
     ucc-gen --ta-version="$Version"
     PACKAGE_ID=$(/bin/ls output/)
     BUILD_DIR=output/$PACKAGE_ID
