@@ -8,7 +8,7 @@ build:
   stage: build
   before_script:
     - git remote rm origin
-    - git remote add origin https://${GITLAB_USER}:${GITLAB_PASS}@${CI_SERVER_HOST}:${CI_PROJECT_PATH}.git
+    - git remote add origin https://${GITLAB_USER}:${GITLAB_PASS}@${CI_SERVER_HOST}${CI_PROJECT_PATH}.git
     - git config --global user.email "cicd@digital.nhs.uk"
     - git config --global user.name "Gitlab Runner"
   script: |
