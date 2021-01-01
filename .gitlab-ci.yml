@@ -22,7 +22,7 @@ build:
     pip install pip==20.2
     pip install -r requirements_dev.txt || true
     echo "${CI_COMMIT_TAG}" > nextRelease.txt
-    Version=$(cat nextRelease.txt)
+    [[ ! -z "${CI_COMMIT_TAG}" ]] && Version="${CI_COMMIT_TAG}" || Version="0.0.1"
     echo "============"
     echo "$Version"
     echo "============"
