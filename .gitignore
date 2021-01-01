@@ -33,6 +33,7 @@ build_scripts/*.gz
 splunk-ref-pas-code.iml
 
 out/
+output/
 
 # RVM and rbenv
 /.rvmrc
@@ -41,3 +42,7 @@ out/
 /test-reports
 src/*/local/*
 depsprivate/*
+
+Pipfile
+Pipfile.lock
+
