@@ -45,7 +45,7 @@ This app has been tested in a standalone container using the following command:
  * Assume Role using IAM User (Access/Secret Key + Role ARN)
  * Assume Role using Instance Profile (when running from an AWS EC2 host with appropriate credentials)  
  
-The app has been tested on the latest 7.3 and 8.1 Splunk Enterprise builds.
+The app has been tested on the latest 8.0 and 8.1 Splunk Enterprise builds.
 
 #### Installation on existing deployments
 
