@@ -6,8 +6,7 @@ stages:
 build:
   image: circleci/buildpack-deps:stable
   stage: build
-  before_script:
-    - |
+  script: |
     sudo apt-get update
     sudo apt-get install -y python2 python-pip python-virtualenv python3 python3.7 python3-pip python3-virtualenv
     python3.7 -m virtualenv ~/.venv -p python3
@@ -15,8 +14,6 @@ build:
     pip install pip==20.2
     pip install -r requirements_dev.txt || true
     pip install semantic_version==2.6.0
-
-  script: |
     sudo apt install npm
     echo "" > nextRelease.txt
     npx -p @semantic-release/exec -p semantic-release semantic-release --dry-run --plugins "@semantic-release/commit-analyzer,@semantic-release/exec" --analyzeCommits @semantic-release/commit-analyzer --verifyRelease @semantic-release/exec --verifyReleaseCmd 'echo ${nextRelease.version} > nextRelease.txt'
