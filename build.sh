@@ -1,3 +1,14 @@
+#sudo apt install npm
+echo "" > nextRelease.txt
+npx -p @semantic-release/exec -p semantic-release semantic-release --dry-run --plugins "@semantic-release/commit-analyzer,@semantic-release/exec" --analyzeCommits @semantic-release/commit-analyzer --verifyRelease @semantic-release/exec --verifyReleaseCmd 'echo ${nextRelease.version} > nextRelease.txt'
+Version=$(cat nextRelease.txt)
+echo "============"
+echo "$Version"
+echo "============"
+#source ~/.venv/bin/activate
+ucc-gen --ta-version="$Version"
+
+                
 PACKAGE_ID=$(ls output/)
 BUILD_DIR=output/$PACKAGE_ID
 source ~/.venv/bin/activate
