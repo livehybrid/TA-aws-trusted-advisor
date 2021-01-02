@@ -1,3 +1,5 @@
+[![CircleCI](https://circleci.com/gh/livehybrid/TA-aws-trusted-advisor/tree/cicd.svg?style=shield)](https://circleci.com/gh/livehybrid/TA-aws-trusted-advisor/tree/cicd)  
+
 # AWS Trusted Advisor Aggregator
 
 Version 1.0.7 (Released 29th December 2020) . 
