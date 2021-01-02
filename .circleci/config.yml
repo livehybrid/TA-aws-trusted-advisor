@@ -29,6 +29,9 @@ orbs:
               command: |
                 source ~/.venv/bin/activate
                 [ -z "${CIRCLE_TAG}" ] && VERSION=${CIRCLE_TAG} || VERSION="0.0.0-${CIRCLE_BRANCH//\//_}"
+                echo "-------------------------"
+                echo "Building Version $VERSION"
+                echo "-------------------------"
                 ucc-gen --ta-version=$VERSION
           - run:
               name: Generating package
