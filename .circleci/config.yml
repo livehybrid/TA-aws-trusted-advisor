@@ -24,6 +24,8 @@ orbs:
                 pip install https://download.splunk.com/misc/packaging-toolkit/splunk-packaging-toolkit-1.0.1.tar.gz
                 git clone https://github.com/livehybrid/addonfactory-ucc-generator.git /tmp/ucc/
                 cp -R /tmp/ucc/splunk_add_on_ucc_framework ~/.venv/lib/python3.7/site-packages/
+                echo "Moved modified UCC"
+                ls -ltr ~/.venv/lib/python3.7/site-packages/splunk_add_on_ucc_framework
           - run:
               name: Generate Addon
               command: |
