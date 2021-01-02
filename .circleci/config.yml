@@ -26,6 +26,7 @@ orbs:
                 cp -R /tmp/ucc/splunk_add_on_ucc_framework ~/.venv/lib/python3.7/site-packages/
                 echo "Moved modified UCC"
                 ls -ltr ~/.venv/lib/python3.7/site-packages/splunk_add_on_ucc_framework
+                which ucc-gen
           - run:
               name: Generate Addon
               command: |
