@@ -28,7 +28,7 @@ orbs:
               name: Generate Addon
               command: |
                 source ~/.venv/bin/activate
-                [ -z "${CIRCLE_TAG}" ] && VERSION=${CIRCLE_TAG} || VERSION="0.0.0-${CIRCLE_BRANCH//\//_}"
+                [ ! -z "${CIRCLE_TAG}" ] && VERSION=${CIRCLE_TAG} || VERSION="0.0.0-${CIRCLE_BRANCH//\//_}"
                 echo "-------------------------"
                 echo "Building Version $VERSION"
                 echo "-------------------------"
