@@ -34,7 +34,7 @@ splunk-ref-pas-code.iml
 
 out/
 output/
-
+build/
 # RVM and rbenv
 /.rvmrc
 /.rbenv-version
