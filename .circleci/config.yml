@@ -28,7 +28,7 @@ orbs:
               name: Generate Addon
               command: |
                 source ~/.venv/bin/activate
-                BRANCH_NAME=<< pipeline.git.branch	>>
+                BRANCH_NAME="<< pipeline.git.branch >>"
                 [ -z "${CIRCLE_TAG}" ] && VERSION=${CIRCLE_TAG} || VERSION="0.0.0-${BRANCH_NAME//\//_}"
                 ucc-gen --ta-version=$VERSION
           - run:
