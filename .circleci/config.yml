@@ -22,8 +22,7 @@ orbs:
                 source ~/.venv/bin/activate
                 pip install splunk_add_on_ucc_framework
                 git clone https://github.com/livehybrid/addonfactory-ucc-generator.git /tmp/ucc/
-                rm -rf ~/.venv/lib/python3.7/site-packages/splunk_add_on_ucc_framework
-                mv /tmp/ucc/splunk_add_on_ucc_framework ~/.venv/lib/python3.7/site-packages/
+                cp -R /tmp/ucc/splunk_add_on_ucc_framework ~/.venv/lib/python3.7/site-packages/
           - run:
               name: Generate Addon
               command: |
