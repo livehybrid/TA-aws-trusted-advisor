@@ -4,8 +4,7 @@
         "restRoot": "TA_aws_trusted_advisor",
         "apiVersion": "3.0.0",
         "version": "0.0.1",
-        "displayName": "AWS Trusted Advisor",
-        "schemaVersion": "0.0.1"
+        "displayName": "AWS Trusted Advisor"
     },
     "pages": {
         "configuration": {

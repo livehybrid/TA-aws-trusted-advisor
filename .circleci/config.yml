@@ -16,12 +16,12 @@ orbs:
               name: Setup Environment
               command: |
                 echo "Nothing to do here, all done inside splunk-ci-build image"
-          - run:
-              name: Generate Documentation
-              command: |
-                grip README.md --export README.html --title ""
-                pandoc -s README.html -o package/README.pdf
-                cat README.md | sed 's/package\/appserver/appserver\//g' > package/README.md
+#          - run:
+#              name: Generate Documentation
+#              command: |
+#                cat README.md | sed 's/package\/appserver/appserver/g' > package/README.md
+#                grip README.md --export README.html --title ""
+#                pandoc -s README.html -o package/README.pdf
           - run:
               name: Generate Addon
               command: |
