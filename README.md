@@ -58,26 +58,41 @@ The app does not need installing on your indexing tier.
 It is possible to run the modular input section of the app on a heavy-forwarder or an [IDM](https://www.splunk.com/en_us/blog/platform/introducing-inputs-data-manager-on-splunk-cloud.html), however you will also need to install the app on your search head(s).
 
 ## Configuration
-| # |           |          |
-| --- | --- |:---:|
-| 1 | Once installed, navigate to the app using the dropdown at the top of the Splunk UI. | <img src="appserver/static/img/screenshot-app-dropdown.png" width="200" /> |
-| 2 | Navigate to the "Inputs" tab. | |
-| 3 | Create a new input:<br /><br />*Name*: Something to identify your this input from any other AWS accounts you are monitoring<br /><br />*Interval*: How often to scrape the Trusted Advisor check results, recommended value 43200 (every 12 hours)<br /><br />*Index*: The name of the index that you want the scraped data to go into. Note: the `trusted-advisor-index` macro will need updating to match your chosen index (index=main by default).<br /><br />*AWS Access Key*: The Access Key of the IAM user to use to connect, not required if you're running on your Splunk instance on AWS using an [Instance Profile](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_use_switch-role-ec2_instance-profiles.html)<br /><br />*AWS Secret Key*: As above<br /><br />*Role ARN*: Set thi to an AWS IAM Role ARN if your IAM User/Instance Profile is required to assume a different role to access Trusted Advisor (e.g. accessing other accounts). | <img src="appserver/static/img/screenshot-app-config-input.png" width="200" /> |
-| 4 | Enable the saved search "Trusted Advisor Checks Lookup Populator" - This is used to generate the metadata used in the dashboards to display the various Trusted Advisor checks. | <img src="appserver/static/img/screenshot-savedsearch-config.png" width="200" /> |
-| 5 | Manually run the saved search or manually run `\| getchecks \| outputlookup trusted_advisor_checks` | <img src="appserver/static/img/screenshot-lookup-populator.png" width="200" /> |
-| 6 | If you are using a custom index (default is `main`), update the `trusted-advisor-index` macro. | |
+
+1. Once installed, navigate to the app using the dropdown at the top of the Splunk UI.  
+<img src="package/appserver/static/img/screenshot-app-dropdown.png" width="200" />
+
+2. Navigate to the "Inputs" tab.  
+
+3. Create a new input:  
+*Name*: Something to identify your this input from any other AWS accounts you are monitoring  
+*Interval*: How often to scrape the Trusted Advisor check results, recommended value 43200 (every 12 hours)  
+*Index*: The name of the index that you want the scraped data to go into. Note: the `trusted-advisor-index` macro will need updating to match your chosen index (index=main by default).  
+*AWS Access Key*: The Access Key of the IAM user to use to connect, not required if you're running on your Splunk instance on AWS using an [Instance Profile](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_use_switch-role-ec2_instance-profiles.html)  
+*AWS Secret Key*: As above  
+*Role ARN*: Set this to an AWS IAM Role ARN if your IAM User/Instance Profile is required to assume a different role to access Trusted Advisor (e.g. accessing other accounts).  
+<img src="package/appserver/static/img/screenshot-app-config-input.png" width="200" />
+
+4. Enable the saved search "Trusted Advisor Checks Lookup Populator" - This is used to generate the metadata used in the dashboards to display the various Trusted Advisor checks.  
+<img src="package/appserver/static/img/screenshot-savedsearch-config.png" width="200" />
+
+5. Manually run the saved search or manually run `| getchecks | outputlookup trusted_advisor_checks`  
+<img src="package/appserver/static/img/screenshot-lookup-populator.png" width="200" />
+
+6. If you are using a custom index (default is `main`), update the `trusted-advisor-index` macro.  
+
 ## Operation
 Once configured, navigate to the `Trusted Advisor` tab, this will display the pre-configured dashboard giving an overview of your Trusted Advisor findings.  
 Use the Time and Account dropdowns to select different time periods, or to view specific (or all) AWS accounts. The names in the account list correspond to the input(s) created during the configuration of the app. 
 
-![screenshot3](./appserver/static/img/screenshot-app-usage.png)
+![screenshot3](./package/appserver/static/img/screenshot-app-usage.png)
 
 Once you see your recommendations, click a row in the Overview table to see more information, e.g. specific resource recommendations or at-risk components.
 ## Troubleshooting
 If you are not seeing results in your dashboard, there are a couple of things to check.
 
 1. Check that the `trusted_advisor_checks` lookup is not empty:
-![screenshot7](./appserver/static/img/screenshot-test-lookup.png)
+![screenshot7](./package/appserver/static/img/screenshot-test-lookup.png)
 If this is empty, try running the "Populator" saved search, or manually run `| getchecks | outputlookup trusted_advisor_checks` and use the job inspector to identify any errors.
 
 2. Check that the `trusted-advisor-index` macro is referencing the index that you are storing your data in. If there is no data in the expected index, check the input is enabled and the details are correct. Failing this, check the _internal logs (see below).

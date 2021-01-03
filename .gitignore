@@ -46,3 +46,5 @@ depsprivate/*
 Pipfile
 Pipfile.lock
 
+README.pdf
+README.html
