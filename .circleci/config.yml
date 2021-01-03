@@ -65,7 +65,7 @@ orbs:
           - attach_workspace:
               at: /tmp/workspace
           - checkout
-          - go/install
+#          - go/install
           - run:
               name: "Publish on GitHub"
               command: |
