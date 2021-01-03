@@ -16,6 +16,7 @@ orbs:
               name: Setup Environment
               command: |
                 echo "Nothing to do here, all done inside splunk-ci-build image"
+                rm -rf build/
           - run:
               name: Generate Documentation
               command: |
