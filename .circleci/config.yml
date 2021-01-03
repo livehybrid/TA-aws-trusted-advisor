@@ -84,7 +84,7 @@ workflows:
             branches:
               only: /.*/
             tags:
-              only: /^v\d*\.\d*\.\d*.*$/
+              only: /^\d*\.\d*\.\d*.*$/
       - splunk-app-package/publish-gh:
           context:
             - gdi-github
@@ -94,4 +94,4 @@ workflows:
             branches:
               ignore: /.*/
             tags:
-              only: /^v\d*\.\d*\.\d*.*$/
+              only: /^\d*\.\d*\.\d*.*$/
