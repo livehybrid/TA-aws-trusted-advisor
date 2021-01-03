@@ -1,4 +1,4 @@
-[![CircleCI](https://circleci.com/gh/livehybrid/TA-aws-trusted-advisor?style=shield)](https://circleci.com/gh/livehybrid/TA-aws-trusted-advisor)  
+[![CircleCI](https://circleci.com/gh/livehybrid/TA-aws-trusted-advisor.svg?style=shield)](https://circleci.com/gh/livehybrid/TA-aws-trusted-advisor)  
 
 # AWS Trusted Advisor Aggregator
 
