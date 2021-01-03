@@ -21,14 +21,19 @@ orbs:
               name: Generate Addon
               command: |
                 source ~/.venv/bin/activate
-                [ ! -z "${CIRCLE_TAG}" ] && VERSION=${CIRCLE_TAG} || VERSION="0.0.0-${CIRCLE_BRANCH//\//_}"
-                echo "-------------------------"
-                echo "Building Version $VERSION"
-                echo "-------------------------"
                 grip README.md --export README.html --title ""
                 pandoc -s README.html -o package/README.pdf
                 cat README.md | sed 's/\.\/package\/appserver/\.\/appserver\//g' > package/README.md
+                if [ ! -z "${CIRCLE_TAG}" ] then
+                VERSION=${CIRCLE_TAG}
+                ucc-gen
+                else
+                VERSION="0.0.0-${CIRCLE_BRANCH//\//_}"
                 ucc-gen --ta-version=$VERSION
+                fi
+                echo "-------------------------"
+                echo "Building Version $VERSION"
+                echo "-------------------------"
           - run:
               name: Generating package
               command: |
