@@ -60,7 +60,7 @@ orbs:
               destination: build-version
       publish-gh:
         docker:
-          - image: circleci/python:3.7
+          - image: cimg/go:latest
         steps:
           - attach_workspace:
               at: /tmp/workspace
