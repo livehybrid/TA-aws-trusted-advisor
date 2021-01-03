@@ -24,7 +24,8 @@ orbs:
                 grip README.md --export README.html --title ""
                 pandoc -s README.html -o package/README.pdf
                 cat README.md | sed 's/\.\/package\/appserver/\.\/appserver\//g' > package/README.md
-                if [ ! -z "${CIRCLE_TAG}" ] then
+                if [[ ! -z "${CIRCLE_TAG}" ]]
+                then
                 VERSION=${CIRCLE_TAG}
                 ucc-gen
                 else
