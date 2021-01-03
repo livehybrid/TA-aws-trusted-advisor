@@ -85,14 +85,14 @@ It is possible to run the modular input section of the app on a heavy-forwarder 
 Once configured, navigate to the `Trusted Advisor` tab, this will display the pre-configured dashboard giving an overview of your Trusted Advisor findings.  
 Use the Time and Account dropdowns to select different time periods, or to view specific (or all) AWS accounts. The names in the account list correspond to the input(s) created during the configuration of the app. 
 
-![screenshot3](./package/appserver/static/img/screenshot-app-usage.png)
+![screenshot3](package/appserver/static/img/screenshot-app-usage.png)
 
 Once you see your recommendations, click a row in the Overview table to see more information, e.g. specific resource recommendations or at-risk components.
 ## Troubleshooting
 If you are not seeing results in your dashboard, there are a couple of things to check.
 
 1. Check that the `trusted_advisor_checks` lookup is not empty:
-![screenshot7](./package/appserver/static/img/screenshot-test-lookup.png)
+![screenshot7](package/appserver/static/img/screenshot-test-lookup.png)
 If this is empty, try running the "Populator" saved search, or manually run `| getchecks | outputlookup trusted_advisor_checks` and use the job inspector to identify any errors.
 
 2. Check that the `trusted-advisor-index` macro is referencing the index that you are storing your data in. If there is no data in the expected index, check the input is enabled and the details are correct. Failing this, check the _internal logs (see below).

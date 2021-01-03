@@ -1,5 +1,6 @@
 {
   "schemaVersion": "1.0.0",
+  "description": "AWS Trusted Advisor Aggregator",
   "info": {
     "title": "AWS Trusted Advisor",
     "id": {
@@ -15,7 +16,6 @@
       }
     ],
     "releaseDate": null,
-    "description": "",
     "classification": {
       "intendedAudience": null,
       "categories": [],
