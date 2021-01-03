@@ -31,7 +31,7 @@ orbs:
                 VERSION=${CIRCLE_TAG}
                 ucc-gen
                 else
-                VERSION="0.0.0-${CIRCLE_BRANCH//\//_}"
+                VERSION="0.0.0${CIRCLE_BRANCH//\//_}"
                 ucc-gen --ta-version=$VERSION
                 fi
                 echo "-------------------------"
