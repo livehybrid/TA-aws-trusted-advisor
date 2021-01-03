@@ -25,13 +25,13 @@ orbs:
                 echo "-------------------------"
                 echo "Building Version $VERSION"
                 echo "-------------------------"
+                grip README.md --export README.html --title ""
+                pandoc -s README.html -o package/README.pdf
+                cat README.md | sed 's/\.\/package\/appserver/\.\/appserver\//g' > package/README.md
                 ucc-gen --ta-version=$VERSION
           - run:
               name: Generating package
               command: |
-                grip README.md --export README.html --title ""
-                pandoc -s README.html -o package/README.pdf
-                cat README.md | sed 's/\.\/package\/appserver/\.\/appserver\//g' > package/README.md
                 PACKAGE_ID=$(ls output/)
                 BUILD_DIR=output/$PACKAGE_ID              
                 source ~/.venv/bin/activate                
