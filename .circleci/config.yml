@@ -60,7 +60,7 @@ orbs:
               destination: build-version
       publish-gh:
         docker:
-          - image: cimg/go:latest
+          - image: cimg/go:1.13
         steps:
           - attach_workspace:
               at: /tmp/workspace
