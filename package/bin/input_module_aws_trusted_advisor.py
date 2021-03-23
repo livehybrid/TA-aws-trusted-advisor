@@ -90,20 +90,23 @@ def authenticate(helper):
     :return: aws_client
     """
     
-    aws_access_key_id=helper.get_arg('aws_access_key')
-    aws_secret_access_key=helper.get_arg('aws_secret_key')
+    aws_access_key_id=helper.get_arg('aws_access_key') if helper.get_arg('aws_access_key') !="" else None
+    aws_secret_access_key=helper.get_arg('aws_secret_key') if helper.get_arg('aws_secret_key') != "" else None
     aws_session_token=None
     
     role_arn = helper.get_arg('role_arn')
     if role_arn:
         try:
-            audit_sts_client = boto3.client('sts')
-            sts_response = boto3.client('sts').assume_role(
+            sts_response = boto3.client(
+                'sts',
+                aws_access_key_id=aws_access_key_id,
+                aws_secret_access_key=aws_secret_access_key
+            ).assume_role(
                 RoleArn=role_arn,
                 RoleSessionName="splunk",
                 DurationSeconds=900 #min 900 max inf
             )
-
+            helper.log_info("Created STS Client and assumed role={}".format(role_arn))
             sts_credentials = sts_response['Credentials']
             aws_access_key_id = sts_credentials['AccessKeyId']
             aws_secret_access_key = sts_credentials['SecretAccessKey']

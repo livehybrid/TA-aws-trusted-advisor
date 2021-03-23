@@ -6,10 +6,10 @@ Common functions used across both inputs.
 import datetime
 import logging
 import re
-import sys
 import splunk.entity as entity
 import splunk.rest
 import json
+import os, sys, logging as logger
 
 def get_session_key():
     """
@@ -25,17 +25,32 @@ def get_session_key():
         return session_key
 
 
-def get_credentials(session_key, owner, namespace):
+def get_credentials(session_key, owner, namespace, log_level=logger.INFO):
     """
     :param session_key:
     :return: AWS Keys
     """
-    import os, sys, logging as logger
-    logger.basicConfig(level=logger.INFO,
+    logger.basicConfig(level=log_level,
                    format='%(asctime)s %(levelname)s %(message)s',
                    filename=os.path.join(os.environ['SPLUNK_HOME'],'var','log','splunk','trusted_advisor.log'),
                    filemode='a')
 
+    try:
+        server_response, server_content = splunk.rest.simpleRequest('/servicesNS/nobody/TA-aws-trusted-advisor/TA_aws_trusted_advisor_aws_trusted_advisor?count=0&output_mode=json', sessionKey=session_key)
+
+        if server_response['status'] != '200':
+            raise Exception("Server response indicates that the request failed")
+
+        inputs_content = json.loads(server_content)
+        inputs = inputs_content['entry']
+        first_input = inputs[0]
+        input_name = first_input['name']
+        input_role_arn = first_input['content']['role_arn']
+        logger.debug("Found input={} with role_arn={}".format(input_name, input_role_arn))
+    except(Exception) as e:
+        logger.critical("Could not pull inputs")
+        logger.critical(e)
+        return None, None, None
 
     try:
         # list all credentials
@@ -48,12 +63,10 @@ def get_credentials(session_key, owner, namespace):
         for i,stanza in entities.items():
             if stanza['eai:acl']['app'] == namespace:
                 cred = json.loads(stanza['clear_password'])
-                return cred['aws_access_key'], cred['aws_secret_key']
+                return cred['aws_access_key'], cred['aws_secret_key'], input_role_arn
     else:
-        message = 'No credentials have been found. Please set them up in your AWS console.'
-        make_error_message(message, session_key, 'common.py')
-        sys.exit(0)
-
+        logger.warning("Unable to find any entities")
+        return None, None, input_role_arn
 
 def make_error_message(message, session_key, filename):
     """
