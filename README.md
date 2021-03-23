@@ -1,8 +1,12 @@
-[![CircleCI](https://circleci.com/gh/livehybrid/TA-aws-trusted-advisor.svg?style=shield)](https://circleci.com/gh/livehybrid/TA-aws-trusted-advisor)  
+[![CircleCI](https://circleci.com/gh/livehybrid/TA-aws-trusted-advisor.svg?style=shield)](https://circleci.com/gh/livehybrid/TA-aws-trusted-advisor)  ![Splunkbase Downloads](https://img.shields.io/endpoint?url=https%3A%2F%2Fsplunkbasebadge.livehybrid.com%2Fv1%2Fdownloads%2F4207?1)  ![Splunkbase Installs](https://img.shields.io/endpoint?url=https%3A%2F%2Fsplunkbasebadge.livehybrid.com%2Fv1%2Finstalls%2F4207?2)  ![Splunkbase AppInspect](https://img.shields.io/endpoint?url=https%3A%2F%2Fsplunkbasebadge.livehybrid.com%2Fv1%2Fappinspect%2F4207?1)  ![Splunkbase Compatibility](https://img.shields.io/endpoint?url=https%3A%2F%2Fsplunkbasebadge.livehybrid.com%2Fv1%2Flatest_compat%2F4207) 
 
 # AWS Trusted Advisor Aggregator
 
-Version 1.0.7 (Released 3rd January 2021) . 
+Version 1.0.8 (Released 23rd March 2021) . 
+
+### Bug Fixes  
+1. Allow Assume Role where no AWS Access/Secret Key specified (Using instance profile)  
+1. Improved logging
 
 ## Intro
 
