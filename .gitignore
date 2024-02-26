@@ -49,3 +49,5 @@ Pipfile.lock
 README.pdf
 README.html
 package/README.md
+splunksplwrapper.log
+pytest_splunk_addon.log
