@@ -1,4 +1,4 @@
-<form script="html_render.js">
+<form script="html_render.js" version="1.1">
   <label>Trusted Advisor</label>
   <description>Results from the latest Trusted Advisor Checks.</description>
   <search id="mainBase">
