@@ -2,7 +2,7 @@
     "meta": {
         "name": "TA-aws-trusted-advisor",
         "restRoot": "TA_aws_trusted_advisor",
-        "version": "1.0.8.1",
+        "version": "1.0.8Reec7286",
         "displayName": "AWS Trusted Advisor",
         "schemaVersion": "0.0.3",
         "_uccVersion": "5.39.0"
