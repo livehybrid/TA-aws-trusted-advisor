@@ -52,7 +52,7 @@ jobs:
           poetry run splunk-appinspect inspect $PACKAGE --mode=precert --data-format junitxml --output-file reports/$PACKAGE_ID-cloud.xml --excluded-tags manual --excluded-tags prerelease  --included-tags cloud
           poetry run splunk-appinspect inspect $PACKAGE --mode=precert --data-format junitxml --output-file reports/$PACKAGE_ID-private-victoria.xml --included-tags private_victoria
           poetry run splunk-appinspect inspect $PACKAGE --mode=precert --data-format junitxml --output-file reports/$PACKAGE_ID-future.xml --included-tags future
-          
+
       # - name: Run App Inspect CLI
       #   uses: splunk/appinspect-cli-action@v1.5
       #   with:
@@ -65,7 +65,7 @@ jobs:
           username: ${{ secrets.SPLUNKBASE_USERNAME }}
           password: ${{ secrets.SPLUNKBASE_PASSWORD }}
           app_path: dist
-          included_tags: "private_victoria"
+          included_tags: "splunk_appinspect"
           excluded_tags: "offensive"
 
       - name: Upload package artifact
