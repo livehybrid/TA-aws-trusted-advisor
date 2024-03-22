@@ -28,7 +28,7 @@ pytest-xdist = "2.5.0"
 requests = "2.31.0"
 reuse = "1.1.2"
 six = "1.16.0"
-splunk-add-on-ucc-framework = "^5.39.0"
+splunk-add-on-ucc-framework = "^5.40.0"
 # todo: remove the path reference when this installs in a virtualenv ok
 splunk-packaging-toolkit = {url = "https://github.com/NHSDigital/splunk-packaging-toolkit-whl/releases/download/v2021.09.26.10.44/splunk_packaging_toolkit-1.0.1-py3-none-any.whl"}
 splunk-sdk = "1.7.4"
