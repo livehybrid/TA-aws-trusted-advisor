@@ -1448,13 +1448,13 @@ pytest = ">=7"
 
 [[package]]
 name = "pytest-splunk-addon"
-version = "5.2.4"
+version = "5.2.5"
 description = "A Dynamic test tool for Splunk Apps and Add-ons"
 optional = false
 python-versions = ">=3.7,<4.0"
 files = [
-    {file = "pytest_splunk_addon-5.2.4-py3-none-any.whl", hash = "sha256:13eff67eadbeac6b0c1b54bf25b48aa56db3a8df99d1ed770b4f08a5372a69cc"},
-    {file = "pytest_splunk_addon-5.2.4.tar.gz", hash = "sha256:ea30587c15279fc70166e23bb57e236e960281c9d5114763e5d9036a49e3ade7"},
+    {file = "pytest_splunk_addon-5.2.5-py3-none-any.whl", hash = "sha256:b400f6071c847bf1ce4d410b3bd58d5f2d04372682be16642e692f7cea1ff3e0"},
+    {file = "pytest_splunk_addon-5.2.5.tar.gz", hash = "sha256:759ace16f1ee2cd1e9fe8b3e0aa589aeb187efe0a45b7799a9700d00ec2fede6"},
 ]
 
 [package.dependencies]
@@ -1466,7 +1466,7 @@ jsonschema = ">=4,<5"
 junitparser = ">=2.2.0,<3.0.0"
 pytest = ">5.4.0,<8"
 pytest-ordering = ">=0.6,<0.7"
-pytest-xdist = ">=2.3.0,<3.0.0"
+pytest-xdist = ">=2.3.0"
 requests = ">=2.31.0,<3.0.0"
 splunk-sdk = ">=1.6"
 splunksplwrapper = ">=1.1.1,<2.0.0"
