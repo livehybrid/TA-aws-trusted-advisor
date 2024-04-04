@@ -1881,12 +1881,12 @@ urllib3 = "<2"
 
 [[package]]
 name = "splunk-appinspect"
-version = "3.2.0"
+version = "3.5.0"
 description = "Automatic validation checks for Splunk Apps"
 optional = false
 python-versions = "*"
 files = [
-    {file = "splunk-appinspect-3.2.0.tar.gz", hash = "sha256:1383b70088af17cce859ec38e5e7f8d875e2faa018d840ecca2a5ca39a50d359"},
+    {file = "splunk-appinspect-3.5.0.tar.gz", hash = "sha256:80b079ca8cd947bc7469376d9e7222f49eec9d6851514247be0acc200d2b2266"},
 ]
 
 [package.dependencies]
@@ -1908,7 +1908,7 @@ markdown = ">=3.1.1,<4.dev0"
 packaging = "23.0"
 packaging-legacy = "23.0"
 painter = ">=0.3.1,<1.dev0"
-pillow = "9.5.0"
+pillow = ">=9.5.0,<=10.0.0"
 python-magic = "0.4.24"
 pyyaml = ">=6.0.1,<7.dev0"
 regex = "2022.1.18"
