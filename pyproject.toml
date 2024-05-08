@@ -34,7 +34,7 @@ splunk-packaging-toolkit = {url = "https://github.com/NHSDigital/splunk-packagin
 splunk-sdk = "2.0.1"
 u-msgpack-python = "2.8.0"
 wheel = "0.42.0"
-splunk-appinspect = "^3.5.0"
+splunk-appinspect = "^3.7.0"
 typing-extensions = "4.7.1"
 attr = "0.3.2"
 grip = "4.6.2"
