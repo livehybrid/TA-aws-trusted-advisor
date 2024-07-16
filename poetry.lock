@@ -1979,13 +1979,13 @@ socks = ["PySocks (>=1.5.6,!=1.5.7,<2.0)"]
 
 [[package]]
 name = "versioningit"
-version = "3.1.0"
+version = "3.1.1"
 description = "Versioning It with your Version In Git"
 optional = false
 python-versions = ">=3.7"
 files = [
-    {file = "versioningit-3.1.0-py3-none-any.whl", hash = "sha256:a2f94968a37fac1192b5b6465356c64e77ae05fc7d32a7d7dddf10339ad147a0"},
-    {file = "versioningit-3.1.0.tar.gz", hash = "sha256:7aac713c31a53eb367a6bbc2e8b3de8cc2b86d10d45c5101afd651446cb10fd7"},
+    {file = "versioningit-3.1.1-py3-none-any.whl", hash = "sha256:3f5a855d98a2a85e909264f2eac3cce380b71f7632e7de55bc22bff9f03639ee"},
+    {file = "versioningit-3.1.1.tar.gz", hash = "sha256:b0ba586e5af08b87dbe3354082910a1d0502c36202d496e1ae60ef3b41ee29c1"},
 ]
 
 [package.dependencies]
@@ -2088,4 +2088,4 @@ testing = ["big-O", "flake8 (<5)", "jaraco.functools", "jaraco.itertools", "more
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.7,<3.10"
-content-hash = "b8f1cb0e8a34b7e9823d7de986434a08edbff7701051d6f3dd7a45f46a9103b0"
+content-hash = "b0694f9c537b951b50725404fe4bb8c179e36b2e1a28036279e467bd27677608"
