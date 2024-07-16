@@ -6,3 +6,8 @@ updates:
       - "/package/lib/
     schedule:
       interval: "daily"
+    groups:
+      splunk:
+        applies-to: version-updates
+        patterns:
+        - "splunk*"
