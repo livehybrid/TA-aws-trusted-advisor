@@ -62,8 +62,8 @@ jobs:
       - uses: splunk/appinspect-api-action@v3.0
         name: "AppInspect API"
         with:
-          username: ${{ secrets.SPLUNKBASE_USERNAME }}
-          password: ${{ secrets.SPLUNKBASE_PASSWORD }}
+          username: "${{ secrets.SPLUNKBASE_USERNAME }}"
+          password: "${{ secrets.SPLUNKBASE_PASSWORD }}"
           app_path: dist
           included_tags: "splunk_appinspect"
           excluded_tags: "offensive"
