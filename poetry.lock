@@ -1844,12 +1844,12 @@ PyYAML = ">=6.0,<7.0"
 
 [[package]]
 name = "splunk-appinspect"
-version = "3.7.0"
+version = "3.8.0"
 description = "Automatic validation checks for Splunk Apps"
 optional = false
 python-versions = "*"
 files = [
-    {file = "splunk-appinspect-3.7.0.tar.gz", hash = "sha256:e838474ba1834a12ff100432ba769f7f0dff8a1c6bfb85f2d7cf6b4660fdd575"},
+    {file = "splunk-appinspect-3.8.0.tar.gz", hash = "sha256:7fa1045e7c74682f7db38a9db8610174ffb270e0c9ba1e16b636410699fdc536"},
 ]
 
 [package.dependencies]
@@ -2085,4 +2085,4 @@ testing = ["big-O", "flake8 (<5)", "jaraco.functools", "jaraco.itertools", "more
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.7,<3.10"
-content-hash = "bca4a3dcef5364716b41e2e8b386178568dc1e110aa8a9612c1bb3d7d3d4fdc0"
+content-hash = "ab8c6c1344fb2b10c931d4efca0719016e19875f6baba588b0f8e03809035bc4"
