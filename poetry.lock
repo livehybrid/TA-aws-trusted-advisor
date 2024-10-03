@@ -1824,13 +1824,13 @@ files = [
 
 [[package]]
 name = "splunk-add-on-ucc-framework"
-version = "5.49.0"
+version = "5.50.0"
 description = "Splunk Add-on SDK formerly UCC is a build and code generation framework"
 optional = false
 python-versions = "<4.0,>=3.7"
 files = [
-    {file = "splunk_add_on_ucc_framework-5.49.0-py3-none-any.whl", hash = "sha256:5ec83bd680847cd02abaa7fd402b634603263987ec32684a324d5a8983018a15"},
-    {file = "splunk_add_on_ucc_framework-5.49.0.tar.gz", hash = "sha256:8c0e4c4ea8bfe26944c29358ebf14b310d583f27dd2b39b2d52253e58825c138"},
+    {file = "splunk_add_on_ucc_framework-5.50.0-py3-none-any.whl", hash = "sha256:f0321ae3e850e51bdc2e17dd334a2d043fe715cd9e36551d19700809703c38ae"},
+    {file = "splunk_add_on_ucc_framework-5.50.0.tar.gz", hash = "sha256:9142d95a07bb7dfefad83c16b6e150a0e3ae4493a55058a5b717332f479ffd5a"},
 ]
 
 [package.dependencies]
@@ -2085,4 +2085,4 @@ testing = ["big-O", "flake8 (<5)", "jaraco.functools", "jaraco.itertools", "more
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.7,<3.10"
-content-hash = "78b8adce05300d869cfe673558856f2d9c898d84dab50cc2bf256a3da242188a"
+content-hash = "7ec416aeae1597d03b19feaf0f6f7e1992bc4010c1fd81ca82e45c44475dbd2a"
