@@ -1418,13 +1418,13 @@ pytest = ">=7"
 
 [[package]]
 name = "pytest-splunk-addon"
-version = "5.4.0"
+version = "5.4.1"
 description = "A Dynamic test tool for Splunk Apps and Add-ons"
 optional = false
 python-versions = "<4.0,>=3.7"
 files = [
-    {file = "pytest_splunk_addon-5.4.0-py3-none-any.whl", hash = "sha256:b2c6482bbeb4ce9dc225e487e32299431bc94cd17c74574a7e7126a63612c1ca"},
-    {file = "pytest_splunk_addon-5.4.0.tar.gz", hash = "sha256:78212c0583a5c7c5101ee3690e5cf75dba1e7f4edb444255e2a3cc6eee0c6a5a"},
+    {file = "pytest_splunk_addon-5.4.1-py3-none-any.whl", hash = "sha256:634156197954573d8efceca0bd54de9973936cd1601af1ade413b9718b205fb0"},
+    {file = "pytest_splunk_addon-5.4.1.tar.gz", hash = "sha256:df7b07c16e1da3f0f3fd2a6d88779829ba7e5acdfe6631e18a683162d201d81b"},
 ]
 
 [package.dependencies]
@@ -2085,4 +2085,4 @@ testing = ["big-O", "flake8 (<5)", "jaraco.functools", "jaraco.itertools", "more
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.7,<3.10"
-content-hash = "78b8adce05300d869cfe673558856f2d9c898d84dab50cc2bf256a3da242188a"
+content-hash = "11946d504574b8444e31a5f57d0f29916483e63fcd88450c49f22f0c03169ff7"
