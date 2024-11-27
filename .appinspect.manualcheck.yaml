@@ -1,0 +1,22 @@
+check_for_remote_code_execution_in_javascript:
+    comment: 'Manual Check - RCE in Javascript'
+check_built_in_import_function:
+    comment: 'Manual Check - built-in import'
+check_for_builtin_functions:
+    comment: 'Manual Check - built-in function'
+check_for_data_compression_and_archiving:
+    comment: 'Manual Check - Data compression & archiving'
+check_for_file_and_directory_access:
+    comment: 'Manual Check - File/Dir access'
+check_for_generic_operating_system_services:
+    comment: 'Manual Check - OS Services'
+check_for_importing_modules:
+    comment: 'Manual Check - Importing Modules'
+check_for_plain_text_credentials_in_python:
+    comment: 'Manual Check - Plain credentials'
+check_for_environment_variable_use_in_python:
+    comment: 'Manual Check - ENV Vars in Python'
+check_for_secret_disclosure:
+    comment: 'Manual Check - Secret Disclosure'
+check_for_executable_flag:
+    comment: 'Manual Check - Executable flag'
