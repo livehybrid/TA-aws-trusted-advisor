@@ -1,101 +1,44 @@
-name: Splunk App CI/CD 2
-
+name: Splunk App CI/CD
 on:
   push:
     branches:
       - "**"
     tags:
       - "v*.*.*"
-
+permissions:
+  pull-requests: write
+  actions: write
+  checks: write
 jobs:
   package:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - name: Install poetry
-        run: pipx install poetry
-      - uses: actions/setup-python@v5
+      - name: Package app
+        uses: livehybrid/deploy-splunk-app-action@main
         with:
           python-version: "3.9"
-          cache: "poetry"
-          architecture: "x64"
-      - name: "Setup Environment"
-        run: |
-          poetry install --no-root
 
-      - name: Generate Documentation
-        run: |
-          cat README.md | sed 's/package\/appserver/appserver/g' > package/README.md
-          poetry run grip README.md --export README.html --title ""
-          #poetry run pandoc -s README.html -o package/README.pdf
-
-      - name: Generate Addon
-        run: |
-          echo "Version is now calculated by ucc-gen"
-          [ -f ./globalConfig.json ] && poetry run ucc-gen -o output -v || poetry run scripts/build.sh
-          mv output/$(basename $(pwd)) output/app
-
-      - name: Generating package
-        run: |
-          set -x
-          rm -rf output/app/lib/3rdparty/**/*.pyc || true
-          rm -rf output/app/lib/__pycache__ || true
-          mkdir -p dist
-          poetry run ucc-gen package -o dist --path output/app
-
-      - name: Local Inspect package
-        run: |
-          PACKAGE_ID=$(basename $(pwd))
-          PACKAGE=$(ls dist/*)
-          mkdir -p reports
-          poetry run splunk-appinspect inspect $PACKAGE --mode=precert --data-format junitxml --output-file reports/$PACKAGE_ID-splunk_appinspect.xml --excluded-tags manual --excluded-tags prerelease  --included-tags splunk_appinspect
-          poetry run splunk-appinspect inspect $PACKAGE --mode=precert --data-format junitxml --output-file reports/$PACKAGE_ID-cloud.xml --excluded-tags manual --excluded-tags prerelease  --included-tags cloud
-          poetry run splunk-appinspect inspect $PACKAGE --mode=precert --data-format junitxml --output-file reports/$PACKAGE_ID-private-victoria.xml --included-tags private_victoria
-          poetry run splunk-appinspect inspect $PACKAGE --mode=precert --data-format junitxml --output-file reports/$PACKAGE_ID-future.xml --included-tags future
-
-      # - name: Run App Inspect CLI
-      #   uses: splunk/appinspect-cli-action@v1.5
-      #   with:
-      #     app_path: $PACKAGE
-      #     included_tags: cloud, splunk_appinspect
-
-      - uses: splunk/appinspect-api-action@v3.0
-        name: "AppInspect API"
-        with:
-          username: "${{ secrets.SPLUNKBASE_USERNAME }}"
-          password: "${{ secrets.SPLUNKBASE_PASSWORD }}"
-          app_path: dist
-          included_tags: "splunk_appinspect"
-          excluded_tags: "offensive"
-
-      - name: Upload package artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: dist
-          path: dist/
-
-      - name: Upload Reports
-        uses: actions/upload-artifact@v4
-        with:
-          name: reports
-          path: reports
-
-  publish-gh:
+  appinspect:
+    name: quality-appinspect
     needs: package
-    if: startsWith(github.ref, 'refs/tags/v')
-    runs-on: ubuntu-latest
-    container: cimg/go:1.19
+    uses: livehybrid/deploy-splunk-app-action/.github/workflows/appinspect-cli.yml@main
+    with:
+      tags: "cloud,future,private_victoria"
+    secrets:
+      token: "${{ secrets.GITHUB_TOKEN }}"
+
+  quality-appinspect-api:
+    name: quality-appinspect-api
+    needs:
+      - appinspect
+    uses: livehybrid/deploy-splunk-app-action/.github/workflows/appinspect-api.yml@main
+    secrets:
+      splunkbase_username: ${{ secrets.SPLUNKBASE_USERNAME }}
+      splunkbase_password: ${{ secrets.SPLUNKBASE_PASSWORD }}
+  
+  publish-gh:
     permissions:
       contents: write
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-
-      - name: Download artifacts
-        uses: actions/download-artifact@v4
-        with:
-          path: .
-      - uses: ncipollo/release-action@v1
-        with:
-          artifacts: "dist/*"
-          allowUpdates: true
+    needs:
+      - appinspect
+    uses: livehybrid/deploy-splunk-app-action/.github/workflows/publish.yml@main

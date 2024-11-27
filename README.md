@@ -2,11 +2,12 @@
 
 # AWS Trusted Advisor Aggregator
 
-Version 1.0.8 (Released 23rd March 2021) . 
+Version 1.2.0 (Released 27th Nov 2024) . 
 
 ### Bug Fixes  
-1. Allow Assume Role where no AWS Access/Secret Key specified (Using instance profile)  
-1. Improved logging
+1. #57 - Deduping removes some account data  
+1. General Library updates
+1. Repo tidy
 
 ## Intro
 
