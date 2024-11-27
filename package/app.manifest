@@ -1,0 +1,61 @@
+{
+  "schemaVersion": "2.0.0",
+  "info": {
+    "description": "AWS Trusted Advisor Aggregator",
+    "title": "AWS Trusted Advisor",
+    "id": {
+      "group": null,
+      "name": "TA-aws-trusted-advisor",
+      "version": "1.0.7"
+    },
+    "author": [
+      {
+        "name": "William Searle",
+        "email": null,
+        "company": null
+      }
+    ],
+    "releaseDate": null,
+    "classification": {
+      "intendedAudience": null,
+      "categories": [],
+      "developmentStatus": null
+    },
+    "commonInformationModels": null,
+    "license": {
+      "name": null,
+      "text": null,
+      "uri": null
+    },
+    "privacyPolicy": {
+      "name": null,
+      "text": null,
+      "uri": null
+    },
+    "releaseNotes": {
+      "name": null,
+      "text": null,
+      "uri": null
+    }
+  },
+  "dependencies": {
+  },
+  "tasks": [],
+  "inputGroups": {
+  },
+  "incompatibleApps": {
+  },
+  "supportedDeployments": [
+    "_standalone",
+    "_distributed",
+    "_search_head_clustering"
+  ],
+  "targetWorkloads": [
+    "_search_heads"
+  ],
+  "platformRequirements": {
+    "splunk": {
+      "Enterprise": "*"
+    }
+  }
+}
