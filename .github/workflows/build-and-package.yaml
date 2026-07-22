@@ -36,9 +36,57 @@ jobs:
       splunkbase_username: ${{ secrets.SPLUNKBASE_USERNAME }}
       splunkbase_password: ${{ secrets.SPLUNKBASE_PASSWORD }}
   
+  integration-test:
+    name: integration-test (splunk-docker)
+    needs: package
+    if: github.actor != 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install UCC framework + pytest
+        run: pip install --upgrade splunk-add-on-ucc-framework pytest
+
+      - name: Build add-on into stage/
+        shell: bash
+        run: |
+          ucc-gen build --source package --ta-version 1.0.8
+          rm -rf stage && mkdir -p stage
+          cp -r output/TA-aws-trusted-advisor stage/TA-aws-trusted-advisor
+          chmod -R 777 stage/TA-aws-trusted-advisor
+
+      - name: Start Splunk (wait for health)
+        working-directory: docker
+        run: docker compose up -d --wait --wait-timeout 360
+
+      - name: Run integration suite
+        env:
+          SPLUNK_MGMT_URL: https://127.0.0.1:8089
+          SPLUNK_USER: admin
+          SPLUNK_PASSWORD: Changeme1!
+          SPLUNK_CONTAINER: ta_aws_trusted_advisor_splunk
+        run: pytest tests/ -v -ra
+
+      - name: Diagnostics on failure
+        if: failure()
+        working-directory: docker
+        run: |
+          docker exec ta_aws_trusted_advisor_splunk /opt/splunk/bin/splunk search \
+            'search index=_internal (source=*ta-aws-trusted-advisor* OR component=ExecProcessor) (trusted OR advisor OR aws) earliest=-15m | head 25 | table _time component _raw' \
+            -auth admin:Changeme1! 2>&1 | head -40 || true
+
+      - name: Tear down
+        if: always()
+        working-directory: docker
+        run: docker compose down -v || true
+
   publish-gh:
     permissions:
       contents: write
     needs:
       - appinspect
+      - integration-test
     uses: livehybrid/deploy-splunk-app-action/.github/workflows/publish.yml@main

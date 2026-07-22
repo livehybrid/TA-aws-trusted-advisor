@@ -1,0 +1,26 @@
+services:
+  splunk:
+    image: splunk/splunk:10.0
+    container_name: ta_aws_trusted_advisor_splunk
+    hostname: splunk
+    environment:
+      SPLUNK_START_ARGS: --accept-license
+      SPLUNK_GENERAL_TERMS: --accept-sgt-current-at-splunk-com
+      SPLUNK_PASSWORD: ${SPLUNK_PASSWORD:-Changeme1!}
+      SPLUNK_HEC_TOKEN: ""
+    ports:
+      # Fixed ports so the suite can hit https://127.0.0.1:8089 directly.
+      # On a CI runner nothing else contends for these.
+      - "8000:8000"
+      - "8089:8089"
+    volumes:
+      # The built add-on is bind-mounted live from ../stage so a rebuild on the
+      # host updates the running container. The stage/ copy is a throwaway test
+      # build (widened perms), never the packaged artefact.
+      - ../stage/TA-aws-trusted-advisor:/opt/splunk/etc/apps/TA-aws-trusted-advisor
+    healthcheck:
+      test: ["CMD", "curl", "-fsk", "https://localhost:8089/services/server/info", "-u", "admin:${SPLUNK_PASSWORD:-Changeme1!}"]
+      interval: 10s
+      timeout: 5s
+      retries: 40
+      start_period: 30s

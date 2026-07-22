@@ -1,0 +1,3 @@
+# Integration test deps. The suite talks to Splunk over stdlib urllib, so pytest
+# is all that's needed on top of the standard library.
+pytest>=8,<9
