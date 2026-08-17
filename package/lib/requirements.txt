@@ -1,3 +1,9 @@
-# Using boto3 included in Splunk libs 
+# boto3 is provided by Splunk's own bundled libraries (do not vendor it).
+# Runtime lib versions pinned for Splunk's Python 3.9 LTS runtime:
+#   - splunktaucclib >= 8.2.0 : floor required by the current ucc-gen (>= 6.5.2);
+#     8.2.0 still ships splunk_aoblib, which the AOB-style collector uses.
+#   - splunk-sdk < 3.0.0 : 3.0.0 is Python >= 3.13 only.
 # boto3==1.26.61
-splunktaucclib==6.5.3
+splunktaucclib>=8.2.0
+solnlib>=5.5.0
+splunk-sdk>=2.0.2,<3.0.0

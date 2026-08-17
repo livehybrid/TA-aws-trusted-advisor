@@ -1,1 +1,9 @@
-splunk-add-on-ucc-framework==5.54.0
+#
+# Project-level requirements for building, testing and packaging.
+# Runtime lib versions are 3.9-safe (see package/lib/requirements.txt).
+#
+splunk-add-on-ucc-framework>=6.0.0
+splunk-appinspect>=3.6.0
+splunktaucclib>=8.2.0
+solnlib>=5.5.0
+splunk-sdk>=2.0.2,<3.0.0

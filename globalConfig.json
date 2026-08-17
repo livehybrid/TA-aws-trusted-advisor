@@ -5,6 +5,7 @@
         "version": "1.0.8Reec7286",
         "displayName": "AWS Trusted Advisor",
         "schemaVersion": "0.0.3",
+        "supportedPythonVersion": ["3.9"],
         "_uccVersion": "5.39.0"
     },
     "pages": {
