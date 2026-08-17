@@ -6,4 +6,4 @@
 # boto3==1.26.61
 splunktaucclib>=8.2.0
 solnlib>=5.5.0
-splunk-sdk>=2.0.2,<3.0.0
+splunk-sdk>=3.0.0,<4.0.0
