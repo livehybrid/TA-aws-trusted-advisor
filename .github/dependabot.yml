@@ -1,0 +1,25 @@
+version: 2
+updates:
+  - package-ecosystem: "pip"
+    directories:
+      - "/"
+      - "/package/lib/"
+    schedule:
+      interval: "weekly"
+    groups:
+      splunk:
+        applies-to: version-updates
+        patterns:
+          - "splunk*"
+    ignore:
+      # Splunk Cloud runtime is py3.9: splunk-sdk 3.x is py3.13-only and
+      # requests >=2.33 drops py3.9. These majors are rejected on purpose;
+      # lift the caps only when the app moves off the py3.9 runtime.
+      - dependency-name: "splunk-sdk"
+        versions: [">=3.0.0"]
+      - dependency-name: "requests"
+        versions: [">=2.33.0"]
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
