@@ -5,8 +5,6 @@ import json
 
 from splunklib import modularinput as smi
 from solnlib import conf_manager
-from splunktaucclib.splunk_aoblib.setup_util import Setup_Util
-import splunk.Intersplunk as si
 from solnlib import log
 from solnlib import credentials
 from common import *
@@ -87,8 +85,9 @@ class AWS_TRUSTED_ADVISOR(smi.Script):
     def stream_events(self, inputs, ew):
         self.context_meta = inputs.metadata
         self.session_key = inputs.metadata["session_key"]
-        self.splunk_uri = inputs.metadata["server_uri"]
-        self.setup_util = Setup_Util(self.splunk_uri, self.session_key)
+        # NB: deliberately no inputs.metadata["server_uri"] read - Splunk 10 does
+        # not supply it in input metadata; the legacy AOB Setup_Util that
+        # consumed it was never actually used (the estate-wide AOB crash class).
         self.restPath = "ta_aws_trusted_advisor"
 
         for input_name, input_item in inputs.inputs.items():

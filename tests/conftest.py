@@ -62,7 +62,13 @@ class Splunk:
         return json.loads(body)
 
     def entries(self, path, **params):
-        """Return the .entry list of a collection endpoint."""
+        """Return the .entry list of a collection endpoint (unpaginated).
+
+        Splunk collection endpoints default to count=30; on a shared dev
+        instance with many apps the entries under test can fall off the first
+        page and vanish silently. count=0 returns everything.
+        """
+        params.setdefault("count", 0)
         return self.get_json(path, **params).get("entry", [])
 
     def search(self, spl, earliest="-7d", latest="now", count=100):
