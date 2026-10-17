@@ -1,6 +1,6 @@
 services:
   splunk:
-    image: splunk/splunk:10.0
+    image: splunk/splunk:${SPLUNK_IMAGE_TAG:-10.0}
     container_name: ta_aws_trusted_advisor_splunk
     hostname: splunk
     environment:

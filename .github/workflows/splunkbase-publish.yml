@@ -1,0 +1,31 @@
+name: Publish a release to Splunkbase
+
+# Publish (or rehearse) an EXISTING GitHub release to Splunkbase 4207.
+# New tags publish from the main CI/CD workflow; this is for releases cut
+# before that existed, and for dry runs. dry_run checks the listing and logs
+# in, but uploads nothing.
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing GitHub release tag, e.g. v1.2.2
+        required: true
+      dry_run:
+        description: Checks and login only, upload nothing
+        type: boolean
+        default: true
+
+jobs:
+  publish:
+    permissions:
+      contents: read
+    uses: livehybrid/deploy-splunk-app-action/.github/workflows/publish-splunkbase.yml@main
+    with:
+      app_id: "4207"
+      splunk_versions: "10.6,10.5,10.4,10.3,10.2,10.1,10.0,9.4"
+      release_tag: ${{ inputs.tag }}
+      dry_run: ${{ inputs.dry_run }}
+      force: true
+    secrets:
+      splunkbase_username: ${{ secrets.SPLUNKBASE_USERNAME }}
+      splunkbase_password: ${{ secrets.SPLUNKBASE_PASSWORD }}
