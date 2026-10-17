@@ -37,10 +37,15 @@ jobs:
       splunkbase_password: ${{ secrets.SPLUNKBASE_PASSWORD }}
   
   integration-test:
-    name: integration-test (splunk-docker)
+    name: integration-test (splunk-docker ${{ matrix.splunk }})
     needs: package
     if: github.actor != 'dependabot[bot]'
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # Oldest and newest Splunk this release claims on Splunkbase.
+        splunk: ["10.0", "10.6.0"]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -60,6 +65,8 @@ jobs:
 
       - name: Start Splunk (wait for health)
         working-directory: docker
+        env:
+          SPLUNK_IMAGE_TAG: ${{ matrix.splunk }}
         run: docker compose up -d --wait --wait-timeout 360
 
       - name: Run integration suite
@@ -90,3 +97,20 @@ jobs:
       - appinspect
       - integration-test
     uses: livehybrid/deploy-splunk-app-action/.github/workflows/publish.yml@main
+
+  publish-splunkbase:
+    # Tag runs only: needs the GitHub release (all CLI gates + integration)
+    # and Splunk's hosted AppInspect. Uploads stay off until the repo variable
+    # SPLUNKBASE_PUBLISH_ENABLED=true.
+    needs:
+      - publish-gh
+      - quality-appinspect-api
+    permissions:
+      contents: read
+    uses: livehybrid/deploy-splunk-app-action/.github/workflows/publish-splunkbase.yml@main
+    with:
+      app_id: "4207"
+      splunk_versions: "10.6,10.5,10.4,10.3,10.2,10.1,10.0,9.4"
+    secrets:
+      splunkbase_username: ${{ secrets.SPLUNKBASE_USERNAME }}
+      splunkbase_password: ${{ secrets.SPLUNKBASE_PASSWORD }}
