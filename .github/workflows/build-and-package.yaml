@@ -16,7 +16,9 @@ permissions:
   checks: write
 jobs:
   package:
-    runs-on: ubuntu-latest
+    # ubuntu-24.04 because ubuntu-latest (26.04) has no Python 3.9, which the
+    # add-on build and Splunk 10.1-and-earlier parity need.
+    runs-on: ubuntu-24.04
     steps:
       - name: Package app
         uses: livehybrid/deploy-splunk-app-action@main
@@ -45,7 +47,7 @@ jobs:
     name: integration-test (splunk-docker ${{ matrix.splunk }})
     needs: package
     if: github.actor != 'dependabot[bot]'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
       matrix:
