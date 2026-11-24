@@ -27,13 +27,19 @@ def test_input_imports_and_reaches_botocore(splunk):
         broken, reached = [], []
         deadline = time.time() + 180
         while time.time() < deadline and not (broken or reached):
+            # The collector's own exceptions land in the add-on's log file; a
+            # crash before logging is set up lands in ExecProcessor's stderr.
             broken = splunk.search(
-                "search index=_internal sourcetype=splunkd component=ExecProcessor "
-                f'"{APP}" (ModuleNotFoundError OR ImportError OR SyntaxError) | head 5',
+                "search index=_internal "
+                f'(source=*ta_aws_trusted_advisor* OR (component=ExecProcessor "{APP}")) '
+                "(ModuleNotFoundError OR ImportError OR SyntaxError) | head 5",
                 earliest="-15m",
             )
+            # Positive evidence must come from this probe's own run, in the
+            # add-on's log file, so nothing else in _internal can satisfy it.
             reached = splunk.search(
-                "search index=_internal "
+                "search index=_internal source=*ta_aws_trusted_advisor* "
+                f'"{STANZA}" '
                 '(NoCredentialsError OR "Unable to locate credentials" OR '
                 '"security token included in the request is invalid" OR InvalidClientTokenId) '
                 "| head 3",
@@ -44,8 +50,15 @@ def test_input_imports_and_reaches_botocore(splunk):
         assert not broken, "collector failed to import: " + str(
             [h.get("_raw", "")[:300] for h in broken]
         )
-        assert reached, (
-            "no evidence botocore ran (no credential error logged within 180s)"
-        )
+        if not reached:
+            seen = splunk.search(
+                "search index=_internal source=*ta_aws_trusted_advisor* | head 15 "
+                "| table source _raw",
+                earliest="-15m",
+            )
+            raise AssertionError(
+                f"no evidence botocore ran for {STANZA} within 180s; add-on log: "
+                + str([(h.get("source", ""), h.get("_raw", "")[:250]) for h in seen])
+            )
     finally:
         splunk.request("DELETE", f"{NS}/data/inputs/aws_trusted_advisor/{STANZA}")
