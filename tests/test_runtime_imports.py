@@ -52,8 +52,9 @@ def test_input_imports_and_reaches_botocore(splunk):
         )
         if not reached:
             seen = splunk.search(
-                "search index=_internal source=*ta_aws_trusted_advisor* | head 15 "
-                "| table source _raw",
+                "search index=_internal (\"" + STANZA + "\" OR aws_trusted_advisor) "
+                "NOT sourcetype=splunkd_access NOT sourcetype=splunkd_ui_access "
+                "| head 25 | table source _raw",
                 earliest="-15m",
             )
             raise AssertionError(
