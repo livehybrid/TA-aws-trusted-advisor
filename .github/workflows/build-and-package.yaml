@@ -93,6 +93,19 @@ jobs:
           SPLUNK_CONTAINER: ta_aws_trusted_advisor_splunk
         run: pytest tests/ -v -ra
 
+      - name: Inputs ran on the expected Python
+        # 10.2+ must honour python.required = 3.13; 10.0 ignores it and runs 3.9.
+        # Read from splunkd's own exec log, not from anything the add-on reports.
+        env:
+          WANT_313: ${{ matrix.splunk != '10.0' }}
+        run: |
+          lines=$(docker exec -u splunk ta_aws_trusted_advisor_splunk grep -h "ExecProcessor.*exec process: " /opt/splunk/var/log/splunk/splunkd.log | grep "/etc/apps/TA-aws-trusted-advisor/bin/" || true)
+          printf '%s\n' "$lines" | tail -n 20
+          [ -n "$lines" ] || { echo "::error::no ExecProcessor lines for TA-aws-trusted-advisor"; exit 1; }
+          if [ "$WANT_313" = true ]; then
+            if printf '%s\n' "$lines" | grep -v -q "python3\.13"; then echo "::error::an input did not run on python3.13"; exit 1; fi
+          elif printf '%s\n' "$lines" | grep -q "python3\.13"; then echo "::error::an input ran on python3.13 on Splunk 10.0"; exit 1; fi
+
       - name: Diagnostics on failure
         if: failure()
         working-directory: docker
