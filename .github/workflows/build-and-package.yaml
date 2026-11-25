@@ -91,6 +91,8 @@ jobs:
           SPLUNK_USER: admin
           SPLUNK_PASSWORD: Changeme1!
           SPLUNK_CONTAINER: ta_aws_trusted_advisor_splunk
+          MOCK_AWS_URL: http://127.0.0.1:8080
+          MOCK_AWS_URL_FROM_SPLUNK: http://mockaws:8080
         run: pytest tests/ -v -ra
 
       - name: Inputs ran on the expected Python
@@ -113,6 +115,9 @@ jobs:
           docker exec ta_aws_trusted_advisor_splunk /opt/splunk/bin/splunk search \
             'search index=_internal (source=*ta-aws-trusted-advisor* OR component=ExecProcessor) (trusted OR advisor OR aws) earliest=-15m | head 25 | table _time component _raw' \
             -auth admin:Changeme1! 2>&1 | head -40 || true
+          echo "--- mock AWS request log"
+          curl -s http://127.0.0.1:8080/_mock/requests | head -c 6000 || true
+          echo; docker compose logs --tail 60 mockaws || true
 
       - name: Tear down
         if: always()

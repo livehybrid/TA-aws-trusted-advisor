@@ -102,6 +102,16 @@ It is possible to run the modular input section of the app on a heavy-forwarder 
 
 6. If you are using a custom index (default is `main`), update the `trusted-advisor-index` macro.  
 
+### Custom AWS endpoint (advanced, optional)
+By default the add-on calls the public AWS endpoints. To route it through a VPC interface endpoint or an internal gateway, create `local/ta_aws_trusted_advisor_endpoints.conf`:
+
+```ini
+[support]
+endpoint_url = https://vpce-0123abcd.support.us-east-1.vpce.amazonaws.com
+```
+
+Stanzas are boto3 service names (`support`, `sts`). It is a conf file rather than an environment variable because Splunk modular inputs do not inherit splunkd's environment. See `README/ta_aws_trusted_advisor_endpoints.conf.spec`. The add-on's CI uses the same setting to run the collector end to end against a mock AWS Support API (`docker/mock/mock_aws.py`, asserted by `tests/test_mock_aws_data.py`).
+
 ## Operation
 Once configured, navigate to the `Trusted Advisor` tab, this will display the pre-configured dashboard giving an overview of your Trusted Advisor findings.  
 Use the Time and Account dropdowns to select different time periods, or to view specific (or all) AWS accounts. The names in the account list correspond to the input(s) created during the configuration of the app. 

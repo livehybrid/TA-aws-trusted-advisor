@@ -59,7 +59,8 @@ if __name__ == "__main__":
             try:
                 audit_sts_client = boto3.client("sts")
                 sts_response = boto3.client(
-                    "sts", aws_access_key_id=aws_access_key_id, aws_secret_access_key=aws_secret_access_key, aws_session_token=aws_session_token
+                    "sts", aws_access_key_id=aws_access_key_id, aws_secret_access_key=aws_secret_access_key, aws_session_token=aws_session_token,
+                    endpoint_url=common.endpoint_url("sts"),
                 ).assume_role(
                     RoleArn=role_arn, RoleSessionName="splunk", DurationSeconds=900  # min 900 max inf
                 )
@@ -75,7 +76,8 @@ if __name__ == "__main__":
                 logger.critical(e)
 
         client = boto3.client(
-            "support", region_name=region, aws_access_key_id=aws_access_key_id, aws_secret_access_key=aws_secret_access_key, aws_session_token=aws_session_token
+            "support", region_name=region, aws_access_key_id=aws_access_key_id, aws_secret_access_key=aws_secret_access_key, aws_session_token=aws_session_token,
+            endpoint_url=common.endpoint_url("support"),
         )
         checks = client.describe_trusted_advisor_checks(language="en")["checks"]
         output = get_checks(checks)
