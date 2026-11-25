@@ -24,3 +24,23 @@ services:
       timeout: 5s
       retries: 40
       start_period: 30s
+    depends_on:
+      mockaws:
+        condition: service_healthy
+
+  # Mock AWS Support (Trusted Advisor) API for the end-to-end data test.
+  # Splunk reaches it as http://mockaws:8080 through the add-on's endpoint
+  # override; the suite on the host reads its dataset and request log on :8080.
+  mockaws:
+    image: python:3.12-alpine
+    container_name: ta_aws_trusted_advisor_mockaws
+    command: ["python", "-u", "/mock/mock_aws.py"]
+    volumes:
+      - ./mock:/mock:ro
+    ports:
+      - "8080:8080"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/_mock/health')"]
+      interval: 5s
+      timeout: 3s
+      retries: 10

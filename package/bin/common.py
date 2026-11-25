@@ -13,6 +13,7 @@ import json
 import os, sys, logging as logger
 import boto3
 from collections import OrderedDict
+from aws_endpoint import endpoint_url
 
 from splunklib import modularinput as smi
 from botocore.exceptions import EndpointConnectionError
@@ -191,6 +192,7 @@ def aws_authenticate(helper, aws_access_key_id=None, aws_secret_access_key=None,
                 "sts",
                 aws_access_key_id=aws_access_key_id,
                 aws_secret_access_key=aws_secret_access_key,
+                endpoint_url=endpoint_url("sts"),
             ).assume_role(
                 RoleArn=role_arn,
                 RoleSessionName="splunk",
@@ -206,6 +208,10 @@ def aws_authenticate(helper, aws_access_key_id=None, aws_secret_access_key=None,
             print("Failed to get session")
 
     region = "us-east-1"
+    # Optional override (local/ta_aws_trusted_advisor_endpoints.conf); None = real AWS.
+    support_endpoint = endpoint_url("support")
+    if support_endpoint:
+        helper.logger.info("Using support endpoint_url={}".format(support_endpoint))
     try:
         aws_client = boto3.client(
             "support",
@@ -213,6 +219,7 @@ def aws_authenticate(helper, aws_access_key_id=None, aws_secret_access_key=None,
             aws_access_key_id=aws_access_key_id,
             aws_secret_access_key=aws_secret_access_key,
             aws_session_token=aws_session_token,
+            endpoint_url=support_endpoint,
         )
         return aws_client
     except EndpointConnectionError as e:
