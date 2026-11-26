@@ -129,10 +129,10 @@ If this is empty, try running the "Populator" saved search, or manually run `| g
 
 2. Check that the `trusted-advisor-index` macro is referencing the index that you are storing your data in. If there is no data in the expected index, check the input is enabled and the details are correct. Failing this, check the _internal logs (see below).
 
-3. Internal logs - Check `index=_internal source=*/ta_aws_trusted_advisor_aws_trusted_advisor.log` for any errors.  
+3. Internal logs - Check `index=_internal source=*ta-aws-trusted-advisor*` for any errors (the collector logs to `$SPLUNK_HOME/var/log/splunk/ta-aws-trusted-advisor_input.log`). A refused role or bad credentials are logged there with `input=<name>`.  
 The most common cause of error is that the IAM User credentials are incorrect or the User/Role/Profile does not have the required permissions.
 
 4. Manually execute the modular input to check if the script runs correctly:
-`$SPLUNK_HOME/bin/splunk cmd splunkd print-modinput-config aws_trusted_advisor aws_trusted_advisor://<YOUR_INPUT_NAME> | $SPLUNK_HOM/bin/splunk cmd python3 $SPLUNK_HOME/etc/apps/TA-aws-trusted-advisor/bin/input_module_aws_trusted_advisor.py`
+`$SPLUNK_HOME/bin/splunk cmd splunkd print-modinput-config aws_trusted_advisor aws_trusted_advisor://<YOUR_INPUT_NAME> | $SPLUNK_HOME/bin/splunk cmd python3 $SPLUNK_HOME/etc/apps/TA-aws-trusted-advisor/bin/aws_trusted_advisor.py`
 
 5. If you're still experiencing any issues, please [raise an issue in GitHub](https://github.com/livehybrid/TA-aws-trusted-advisor/issues) 
