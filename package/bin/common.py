@@ -199,11 +199,15 @@ def aws_authenticate(helper, aws_access_key_id=None, aws_secret_access_key=None,
         back to the base credentials, which would collect as another principal.
     """
     aws_session_token = None
+    region = "us-east-1"
 
     if role_arn:
         try:
             sts_response = boto3.client(
                 "sts",
+                # A region is required once endpoint_url is set (botocore raises
+                # NoRegionError before sending anything); us-east-1 as for Support.
+                region_name=region,
                 aws_access_key_id=aws_access_key_id,
                 aws_secret_access_key=aws_secret_access_key,
                 endpoint_url=endpoint_url("sts"),
@@ -222,7 +226,6 @@ def aws_authenticate(helper, aws_access_key_id=None, aws_secret_access_key=None,
         aws_session_token = sts_credentials["SessionToken"]
         helper.logger.debug("Assumed role={}".format(role_arn))
 
-    region = "us-east-1"
     # Optional override (local/ta_aws_trusted_advisor_endpoints.conf); None = real AWS.
     support_endpoint = endpoint_url("support")
     if support_endpoint:
