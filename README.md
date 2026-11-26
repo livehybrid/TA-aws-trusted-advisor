@@ -92,6 +92,7 @@ It is possible to run the modular input section of the app on a heavy-forwarder 
 *AWS Access Key*: The Access Key of the IAM user to use to connect, not required if you're running on your Splunk instance on AWS using an [Instance Profile](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_use_switch-role-ec2_instance-profiles.html)  
 *AWS Secret Key*: As above  
 *Role ARN*: Set this to an AWS IAM Role ARN if your IAM User/Instance Profile is required to assume a different role to access Trusted Advisor (e.g. accessing other accounts).  
+If the role cannot be assumed, that input logs `Could not assume role_arn=...` and collects nothing for the run. It does not fall back to the access keys or instance profile, which would collect as a different principal.  
 <img src="package/appserver/static/img/screenshot-app-config-input.png" width="200" />
 
 4. Enable the saved search "Trusted Advisor Checks Lookup Populator" - This is used to generate the metadata used in the dashboards to display the various Trusted Advisor checks.  
