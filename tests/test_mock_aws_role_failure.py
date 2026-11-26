@@ -12,10 +12,15 @@ would have. It must:
     collected as a different principal;
   * log the failure where an admin will look.
 
-stdout is checked twice: by running the collector by hand inside the container
-with an input definition on stdin and capturing exactly what it writes, and by
-asserting that splunkd itself recorded nothing about the scheduled run. Neither
-route is one the collector uses.
+stdout is checked by running the collector by hand inside the container, with
+an input definition on stdin, and capturing exactly what it writes: a route the
+collector does not use.
+
+There is deliberately no check on splunkd's own logs. With the old print
+restored, splunkd 10.0 and 10.6.0 logged no WARN or ERROR about the input,
+the stray text reached no index, and the events after it were indexed: splunkd
+drops leading non-XML text silently. A splunkd-log assertion stayed green on
+that mutant, so it guarded nothing and was removed (26 Nov 2026).
 """
 from __future__ import annotations
 
@@ -156,16 +161,3 @@ def test_failure_is_logged(run, splunk):
     )
     assert hits, "AssumeRole failure was not logged" + _diag(run)
 
-
-def test_splunkd_recorded_nothing_from_the_scheduled_run(run, splunk):
-    # Anything the collector writes outside the XML stream, or to stderr,
-    # appears in splunkd.log against the script (ExecProcessor and the
-    # modular-input XML parser), as do events splunkd could not parse.
-    hits = splunk.search(
-        f"search index=_internal sourcetype=splunkd earliest={run['started']} "
-        f'"aws_trusted_advisor" (log_level=ERROR OR log_level=WARN) | head 10 | table _raw',
-        earliest=str(run["started"]),
-        count=10,
-    )
-    raws = [h.get("_raw", "")[:300] for h in hits]
-    assert not raws, f"splunkd logged errors for the input: {raws}" + _diag(run)
