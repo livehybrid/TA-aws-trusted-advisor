@@ -103,14 +103,20 @@ class AWS_TRUSTED_ADVISOR(smi.Script):
             self.logger = logger
             try:
                 aws_credentials = json.loads(self.get_account_credentials(input_name=input_name))
+                access_key = aws_credentials["aws_access_key"]
+                secret_key = aws_credentials["aws_secret_key"]
+            except Exception:
+                # No stored keys: boto3's default chain (e.g. instance profile).
+                access_key, secret_key = None, None
+            try:
                 aws_client = aws_authenticate(
-                    self,
-                    aws_credentials["aws_access_key"],
-                    aws_credentials["aws_secret_key"],
-                    role_arn=input_item.get("role_arn", None),
+                    self, access_key, secret_key, role_arn=input_item.get("role_arn", None)
                 )
-            except:
-                aws_client = aws_authenticate(self, None, None, role_arn=input_item.get("role_arn", None))
+            except AssumeRoleFailed as e:
+                # Logged, nothing written to the event stream, no fallback to
+                # the base credentials; the next input (if any) still runs.
+                logger.error("input={} {}".format(input_name, e))
+                continue
 
             checks = get_trusted_advisor_checks(aws_client)
             loop_checks(aws_client, checks, self, ew)

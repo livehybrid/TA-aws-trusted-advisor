@@ -134,7 +134,7 @@ def merge_metadata(result, check_metadata):
             header = h or "-"
             value = v or " "
             if isinstance(value, (list,)):
-                value = ", ".join(value)
+                value = ", ".join("" if x is None else str(x) for x in value)
             meta = header + ": " + value + ","
             if "Green" in value or "Yellow" in value or "Red" in value:
                 header = "Status"
@@ -158,15 +158,23 @@ def get_cleaned_metadata_values(result):
     for flagged in result:
         for k_flagged, v_flagged in flagged.items():
             if k_flagged == "metadata":
-                if v_flagged[0]:
-                    container.append(v_flagged)
+                if (v_flagged and v_flagged[0]) or not container:
+                    # A new row (copied: the raw result is also indexed as is).
+                    container.append(list(v_flagged))
                 else:
-                    buckets = container[-1][-1]
-
+                    # A bucket row continues the previous row: its last value
+                    # joins the previous row's last value as a list, whether
+                    # that was None, a string or already a list.
+                    buckets = container[-1][-1] if container[-1] else None
                     if buckets is None:
                         buckets = []
-                    buckets.append(v_flagged[-1])
-                    container[-1][-1] = buckets
+                    elif not isinstance(buckets, list):
+                        buckets = [buckets]
+                    buckets.append(v_flagged[-1] if v_flagged else None)
+                    if container[-1]:
+                        container[-1][-1] = buckets
+                    else:
+                        container[-1].append(buckets)
     return container
 
 
@@ -179,10 +187,16 @@ def newer_timestamp(checkpoint, timestamp):
     return bool(timestamp_dt > checkpoint_dt)
 
 
+class AssumeRoleFailed(Exception):
+    """The input's role could not be assumed; the run must not continue."""
+
+
 def aws_authenticate(helper, aws_access_key_id=None, aws_secret_access_key=None, role_arn=""):
     """
     Authenticates against AWS
     :return: aws_client
+    :raises AssumeRoleFailed: role_arn is set and STS refused it. Never falls
+        back to the base credentials, which would collect as another principal.
     """
     aws_session_token = None
 
@@ -198,14 +212,15 @@ def aws_authenticate(helper, aws_access_key_id=None, aws_secret_access_key=None,
                 RoleSessionName="splunk",
                 DurationSeconds=900,  # min 900 max inf
             )
-            helper.logger.info("Created STS Client and assumed role={}".format(role_arn))
-            sts_credentials = sts_response["Credentials"]
-            aws_access_key_id = sts_credentials["AccessKeyId"]
-            aws_secret_access_key = sts_credentials["SecretAccessKey"]
-            aws_session_token = sts_credentials["SessionToken"]
-            helper.logger.debug("Assumed role={}".format(role_arn))
-        except:
-            print("Failed to get session")
+        except Exception as e:
+            # Never print here: stdout is the XML event stream to splunkd.
+            raise AssumeRoleFailed("Could not assume role_arn={}: {}".format(role_arn, e)) from e
+        helper.logger.info("Created STS Client and assumed role={}".format(role_arn))
+        sts_credentials = sts_response["Credentials"]
+        aws_access_key_id = sts_credentials["AccessKeyId"]
+        aws_secret_access_key = sts_credentials["SecretAccessKey"]
+        aws_session_token = sts_credentials["SessionToken"]
+        helper.logger.debug("Assumed role={}".format(role_arn))
 
     region = "us-east-1"
     # Optional override (local/ta_aws_trusted_advisor_endpoints.conf); None = real AWS.

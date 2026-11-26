@@ -21,10 +21,21 @@ something new fails loudly rather than silently):
   AWS Support / Trusted Advisor (AWSSupport_20130415)
     DescribeTrustedAdvisorChecks
     DescribeTrustedAdvisorCheckResult
+  AWS STS (query protocol: form-encoded POST /, XML response)
+    AssumeRole                               issues fresh temporary credentials
+                                             per call; a RoleArn whose role name
+                                             starts with "mock-denied" gets 403
+                                             AccessDenied
+
+Temporary credentials are enforced: a Health or Support call signed with an
+ASIA... key id must carry the session token issued with that key, or it gets
+403 UnrecognizedClientException. So "the role's credentials were used" is
+something the mock checks, not something the collector reports.
 
 SigV4 is not verified (botocore signs, nobody checks), but the access key id
-from the Authorization header is recorded, so a test can prove the configured
-credentials reached the wire.
+and signing service from the Authorization header, and any
+X-Amz-Security-Token, are recorded, so a test can prove which credentials
+reached the wire. AssumeRole entries also record the credentials issued.
 
 Test-only control endpoints (plain GET/POST, JSON):
   GET  /_mock/health     liveness
@@ -43,10 +54,13 @@ import os
 import struct
 import sys
 import threading
+import urllib.parse
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 HEALTH = "AWSHealth_20160804"
 SUPPORT = "AWSSupport_20130415"
+STS = "sts"
+DENIED_ROLE_PREFIX = "mock-denied"
 EVENTS_PAGE = 2      # events per DescribeEventsForOrganization page
 ACCOUNTS_PAGE = 1    # accounts per DescribeAffectedAccountsForOrganization page
 ENTITIES_PAGE = 2    # entities per DescribeAffectedEntitiesForOrganization page
@@ -203,6 +217,10 @@ def build_dataset(now=None):
         ev(3, 3, "LAMBDA", "AWS_LAMBDA_OPERATIONAL_ISSUE"),
         ev(4, 4, "S3", "AWS_S3_OPERATIONAL_NOTIFICATION"),
         ev(5, 5, "CLOUDFRONT", "AWS_CLOUDFRONT_PUBLIC_NOTICE", scope="PUBLIC"),
+        # Near the far edge of a one-day window. A window computed from local
+        # wall time east of UTC (Asia/Kolkata, +05:30) starts too late and
+        # misses it.
+        ev(6, 22, "DYNAMODB", "AWS_DYNAMODB_MAINTENANCE_SCHEDULED"),
         # Outside a one-day window: must never be collected on first run.
         ev(9, 72, "EBS", "AWS_EBS_OLD_EVENT"),
     ]
@@ -212,7 +230,8 @@ def build_dataset(now=None):
         events[2]["arn"]: ["333333333333"],
         events[3]["arn"]: ["111111111111"],
         events[4]["arn"]: [],                                 # public: no accounts
-        events[5]["arn"]: ["111111111111"],
+        events[5]["arn"]: ["444444444444"],
+        events[6]["arn"]: ["111111111111"],
     }
     entities = {
         events[0]["arn"]: ["i-0aaa0000000000001", "i-0aaa0000000000002", "i-0aaa0000000000003"],  # two pages
@@ -220,7 +239,8 @@ def build_dataset(now=None):
         events[2]["arn"]: ["arn:aws:lambda:eu-west-2:333333333333:function:mock"],
         events[3]["arn"]: ["mock-bucket"],
         events[4]["arn"]: [],
-        events[5]["arn"]: ["vol-0old"],
+        events[5]["arn"]: ["mock-table"],
+        events[6]["arn"]: ["vol-0old"],
     }
     descriptions = {e["arn"]: f"Mock description for {e['eventTypeCode']}." for e in events}
 
@@ -294,6 +314,7 @@ def build_dataset(now=None):
 DATA = build_dataset()
 REQUESTS: list = []
 LOCK = threading.Lock()
+ISSUED: dict = {}      # temporary access key id -> session token
 
 
 class ApiError(Exception):
@@ -400,6 +421,60 @@ def _support(op, p):
     raise ApiError("UnknownOperationException", f"mock does not implement {SUPPORT}.{op}")
 
 
+def _sts(op, p, entry):
+    """AssumeRole over the query protocol. Returns (xml_bytes, status)."""
+    if op != "AssumeRole":
+        raise ApiError("InvalidAction", f"mock does not implement STS {op}")
+    _need(p, "RoleArn", "RoleSessionName")
+    duration = int(p.get("DurationSeconds", 3600))
+    if duration < 900:
+        raise ApiError("ValidationError", "DurationSeconds must be at least 900")
+    arn = p["RoleArn"]
+    role = arn.rsplit("/", 1)[-1]
+    if role.startswith(DENIED_ROLE_PREFIX):
+        raise ApiError("AccessDenied", f"User is not authorized to perform: sts:AssumeRole on resource: {arn}",
+                       status=403)
+    with LOCK:
+        n = len(ISSUED) + 1
+        key = f"ASIAMOCK{n:012d}"
+        token = f"mock-session-token-{n:04d}-{role}"
+        ISSUED[key] = token
+    entry["issued"] = {"AccessKeyId": key, "SessionToken": token, "RoleArn": arn}
+    exp = (_dt.datetime.now(_dt.timezone.utc) + _dt.timedelta(seconds=duration)).strftime("%Y-%m-%dT%H:%M:%SZ")
+    account = arn.split(":")[4] if arn.count(":") >= 5 else "000000000000"
+    return (
+        '<AssumeRoleResponse xmlns="https://sts.amazonaws.com/doc/2011-06-15/">'
+        "<AssumeRoleResult><Credentials>"
+        f"<AccessKeyId>{key}</AccessKeyId><SecretAccessKey>mock-temp-secret-{n:04d}</SecretAccessKey>"
+        f"<SessionToken>{token}</SessionToken><Expiration>{exp}</Expiration>"
+        "</Credentials><AssumedRoleUser>"
+        f"<AssumedRoleId>AROAMOCK{n:012d}:{p['RoleSessionName']}</AssumedRoleId>"
+        f"<Arn>arn:aws:sts::{account}:assumed-role/{role}/{p['RoleSessionName']}</Arn>"
+        "</AssumedRoleUser></AssumeRoleResult>"
+        "<ResponseMetadata><RequestId>mock-request-id</RequestId></ResponseMetadata>"
+        "</AssumeRoleResponse>"
+    ).encode(), 200
+
+
+def _sts_error(e):
+    kind = "Sender" if e.status < 500 else "Receiver"
+    return (
+        '<ErrorResponse xmlns="https://sts.amazonaws.com/doc/2011-06-15/">'
+        f"<Error><Type>{kind}</Type><Code>{e.code}</Code><Message>{e.message}</Message></Error>"
+        "<RequestId>mock-request-id</RequestId></ErrorResponse>"
+    ).encode()
+
+
+def _check_temporary_credentials(key_id, token):
+    """A temporary key id must arrive with the session token issued for it."""
+    if key_id and key_id.startswith("ASIA"):
+        with LOCK:
+            want = ISSUED.get(key_id)
+        if want is None or token != want:
+            raise ApiError("UnrecognizedClientException",
+                           "The security token included in the request is invalid.", status=403)
+
+
 SERVICES = {HEALTH: _health, SUPPORT: _support}
 
 
@@ -447,33 +522,60 @@ class Handler(BaseHTTPRequestHandler):
         if self.path == "/_mock/reset":
             with LOCK:
                 REQUESTS.clear()
+                ISSUED.clear()
             return self._json(200, {"ok": True})
 
+        ctype = (self.headers.get("Content-Type") or "").split(";")[0].strip().lower()
         if self.path.startswith("/service/"):
             proto = "rpc-v2-cbor"
             parts = self.path.strip("/").split("/")  # service/<prefix>/operation/<op>
             prefix, op = (parts[1], parts[3]) if len(parts) == 4 else ("", "")
+        elif ctype == "application/x-www-form-urlencoded" and not self.headers.get("X-Amz-Target"):
+            proto = "query"
+            prefix, op = STS, ""
         else:
             proto = "json"
             target = self.headers.get("X-Amz-Target", "")
             prefix, _, op = target.partition(".")
 
         auth = self.headers.get("Authorization", "")
-        key_id = auth.split("Credential=", 1)[1].split("/", 1)[0] if "Credential=" in auth else None
+        scope = auth.split("Credential=", 1)[1].split(",", 1)[0].split("/") if "Credential=" in auth else []
+        key_id = scope[0] if scope else None
+        signing_service = scope[3] if len(scope) > 3 else None
+        token = self.headers.get("X-Amz-Security-Token")
         try:
-            params = cbor_loads(raw) if proto == "rpc-v2-cbor" else json.loads(raw or b"{}")
+            if proto == "rpc-v2-cbor":
+                params = cbor_loads(raw)
+            elif proto == "query":
+                params = dict(urllib.parse.parse_qsl(raw.decode(), keep_blank_values=True))
+                op = params.pop("Action", "")
+                params.pop("Version", None)
+            else:
+                params = json.loads(raw or b"{}")
         except Exception as exc:  # malformed body: record and refuse
             params, err = {}, ApiError("SerializationException", f"cannot decode body: {exc}")
         else:
             err = None
         entry = {"protocol": proto, "service": prefix, "operation": op,
-                 "params": _plain(params), "access_key_id": key_id}
+                 "params": _plain(params), "access_key_id": key_id,
+                 "signing_service": signing_service, "session_token": token}
         with LOCK:
             REQUESTS.append(entry)
+
+        if proto == "query":
+            try:
+                if err:
+                    raise err
+                body, status = _sts(op, params, entry)
+            except ApiError as e:
+                entry["error"] = e.code
+                body, status = _sts_error(e), e.status
+            return self._send(status, body, "text/xml")
 
         try:
             if err:
                 raise err
+            _check_temporary_credentials(key_id, token)
             fn = SERVICES.get(prefix)
             if not fn:
                 raise ApiError("UnknownOperationException", f"mock does not serve {prefix!r}")
