@@ -21,6 +21,8 @@ local.meta
 
 # Built files
 *.spl
+# Throwaway TLS pair CI writes for the mock's https port
+docker/mock/tls/
 
 # Unknown
 .build

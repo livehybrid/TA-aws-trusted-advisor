@@ -37,6 +37,14 @@ and signing service from the Authorization header, and any
 X-Amz-Security-Token, are recorded, so a test can prove which credentials
 reached the wire. AssumeRole entries also record the credentials issued.
 
+Every recorded call also carries `client` (the address it came from: the
+proxy's container when a proxy relayed it, Splunk's when it came direct) and
+`tls` (whether it arrived on the HTTPS port).
+
+HTTPS: when /mock/tls/cert.pem and key.pem exist (CI writes a throwaway
+self-signed pair for the name "mockaws"), the same handler also listens with
+TLS on MOCK_AWS_TLS_PORT (8443), as real AWS endpoints are https only.
+
 Test-only control endpoints (plain GET/POST, JSON):
   GET  /_mock/health     liveness
   GET  /_mock/dataset    the data this mock serves (what the tests expect)
@@ -51,6 +59,7 @@ from __future__ import annotations
 import datetime as _dt
 import json
 import os
+import ssl
 import struct
 import sys
 import threading
@@ -558,7 +567,8 @@ class Handler(BaseHTTPRequestHandler):
             err = None
         entry = {"protocol": proto, "service": prefix, "operation": op,
                  "params": _plain(params), "access_key_id": key_id,
-                 "signing_service": signing_service, "session_token": token}
+                 "signing_service": signing_service, "session_token": token,
+                 "client": self.client_address[0], "tls": isinstance(self.connection, ssl.SSLSocket)}
         with LOCK:
             REQUESTS.append(entry)
 
@@ -590,8 +600,22 @@ class Handler(BaseHTTPRequestHandler):
             self._send(status, json.dumps(body, default=float).encode(), "application/x-amz-json-1.1")
 
 
+def _serve_tls(port, cert, key):
+    srv = ThreadingHTTPServer(("0.0.0.0", port), Handler)
+    ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+    ctx.load_cert_chain(cert, key)
+    srv.socket = ctx.wrap_socket(srv.socket, server_side=True)
+    sys.stderr.write(f"mock_aws listening with TLS on :{port}\n")
+    srv.serve_forever()
+
+
 def main():
     port = int(os.environ.get("MOCK_AWS_PORT", "8080"))
+    tls_dir = os.environ.get("MOCK_AWS_TLS_DIR", "/mock/tls")
+    cert, key = os.path.join(tls_dir, "cert.pem"), os.path.join(tls_dir, "key.pem")
+    if os.path.isfile(cert) and os.path.isfile(key):
+        tls_port = int(os.environ.get("MOCK_AWS_TLS_PORT", "8443"))
+        threading.Thread(target=_serve_tls, args=(tls_port, cert, key), daemon=True).start()
     srv = ThreadingHTTPServer(("0.0.0.0", port), Handler)
     sys.stderr.write(f"mock_aws listening on :{port}\n")
     srv.serve_forever()

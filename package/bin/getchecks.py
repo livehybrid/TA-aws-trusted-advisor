@@ -54,13 +54,15 @@ if __name__ == "__main__":
         aws_secret_access_key = None
     aws_session_token = None
     region = "us-east-1"
+    # The Proxy tab's proxy, as the input uses it.
+    config = common.aws_config(splunk_session_key, warn=logger.warning)
     try:
         if role_arn:
             try:
                 audit_sts_client = boto3.client("sts")
                 sts_response = boto3.client(
                     "sts", aws_access_key_id=aws_access_key_id, aws_secret_access_key=aws_secret_access_key, aws_session_token=aws_session_token,
-                    endpoint_url=common.endpoint_url("sts"),
+                    endpoint_url=common.endpoint_url("sts"), config=config,
                 ).assume_role(
                     RoleArn=role_arn, RoleSessionName="splunk", DurationSeconds=900  # min 900 max inf
                 )
@@ -77,7 +79,7 @@ if __name__ == "__main__":
 
         client = boto3.client(
             "support", region_name=region, aws_access_key_id=aws_access_key_id, aws_secret_access_key=aws_secret_access_key, aws_session_token=aws_session_token,
-            endpoint_url=common.endpoint_url("support"),
+            endpoint_url=common.endpoint_url("support"), config=config,
         )
         checks = client.describe_trusted_advisor_checks(language="en")["checks"]
         output = get_checks(checks)

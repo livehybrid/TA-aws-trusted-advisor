@@ -27,6 +27,8 @@ services:
     depends_on:
       mockaws:
         condition: service_healthy
+      proxy:
+        condition: service_healthy
 
   # Mock AWS Support (Trusted Advisor) API for the end-to-end data test.
   # Splunk reaches it as http://mockaws:8080 through the add-on's endpoint
@@ -44,3 +46,12 @@ services:
       interval: 5s
       timeout: 3s
       retries: 10
+
+  proxy:
+    # Forward proxy for tests/test_proxy.py: the Proxy tab is pointed at it and
+    # its access log (stdout, PROXYLOG lines) shows which requests went
+    # through it. 3128 is open, 3129 needs basic auth. Not published: only the
+    # Splunk container talks to it.
+    build: ./proxy
+    container_name: ta_aws_trusted_advisor_proxy
+    hostname: proxy

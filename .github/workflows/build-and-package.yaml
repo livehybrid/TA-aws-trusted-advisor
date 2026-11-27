@@ -86,6 +86,13 @@ jobs:
           ucc-gen build --source package --ta-version 1.0.8
           rm -rf stage && mkdir -p stage
           cp -r output/TA-aws-trusted-advisor stage/TA-aws-trusted-advisor
+          # A throwaway TLS pair for the mock's https port: real AWS endpoints
+          # are https, so tests/test_proxy.py needs the CONNECT path too.
+          mkdir -p docker/mock/tls
+          openssl req -x509 -newkey rsa:2048 -nodes -days 2 -subj "/CN=mockaws" \
+            -addext "subjectAltName=DNS:mockaws" \
+            -keyout docker/mock/tls/key.pem -out docker/mock/tls/cert.pem
+          chmod 644 docker/mock/tls/*.pem
           chmod -R 777 stage/TA-aws-trusted-advisor
 
       - name: Start Splunk (wait for health)
@@ -93,6 +100,20 @@ jobs:
         env:
           SPLUNK_IMAGE_TAG: ${{ matrix.splunk }}
         run: docker compose up -d --wait --wait-timeout 360
+
+      # botocore verifies TLS against certifi's bundle (Splunk's Python here:
+      # boto3 is not vendored), so the mock's certificate goes into every
+      # bundle in the test container, as a corporate CA would be installed.
+      - name: Trust the mock's TLS certificate in the Splunk container
+        working-directory: docker
+        run: |
+          docker cp mock/tls/cert.pem ta_aws_trusted_advisor_splunk:/tmp/mockaws.pem
+          docker exec -u root ta_aws_trusted_advisor_splunk sh -c '
+            n=0
+            for f in $(find /opt/splunk/lib /opt/splunk/etc/apps/TA-aws-trusted-advisor -name cacert.pem); do
+              cat /tmp/mockaws.pem >> "$f"; echo "trusts mockaws: $f"; n=$((n+1))
+            done
+            [ "$n" -gt 0 ]'
 
       - name: Run integration suite
         env:
@@ -160,6 +181,7 @@ jobs:
           echo "--- mock AWS request log"
           curl -s http://127.0.0.1:8080/_mock/requests | head -c 6000 || true
           echo; docker compose logs --tail 60 mockaws || true
+          echo "--- proxy log"; docker logs ta_aws_trusted_advisor_proxy 2>&1 | tail -40 || true
 
       - name: Tear down
         if: always()
