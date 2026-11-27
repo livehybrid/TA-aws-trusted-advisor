@@ -14,6 +14,12 @@ import os, sys, logging as logger
 import boto3
 from collections import OrderedDict
 from aws_endpoint import endpoint_url
+from aws_proxy import botocore_proxies, describe as describe_proxy
+from botocore.config import Config
+from solnlib import conf_manager
+
+APP = "TA-aws-trusted-advisor"
+SETTINGS_CONF = "ta_aws_trusted_advisor_settings"
 
 from splunklib import modularinput as smi
 from botocore.exceptions import EndpointConnectionError
@@ -187,6 +193,32 @@ def newer_timestamp(checkpoint, timestamp):
     return bool(timestamp_dt > checkpoint_dt)
 
 
+def read_proxy_settings(session_key, warn=None):
+    """The Proxy tab's [proxy] stanza, password decrypted; {} when there is none."""
+    try:
+        cfm = conf_manager.ConfManager(
+            session_key, APP,
+            realm="__REST_CREDENTIAL__#{}#configs/conf-{}".format(APP, SETTINGS_CONF),
+        )
+        return cfm.get_conf(SETTINGS_CONF).get("proxy") or {}
+    except (conf_manager.ConfStanzaNotExistException, conf_manager.ConfManagerException):
+        return {}  # never configured
+    except Exception as e:
+        if warn:
+            warn("Could not read the proxy settings ({}); calling AWS without a proxy".format(e))
+        return {}
+
+
+def aws_config(session_key, warn=None, info=None):
+    """botocore Config carrying the Proxy tab's proxy, or None for no proxy."""
+    proxies = botocore_proxies(read_proxy_settings(session_key, warn), warn=warn)
+    if not proxies:
+        return None
+    if info:
+        info("Calling AWS through proxy {}".format(describe_proxy(proxies)))
+    return Config(proxies=proxies)
+
+
 class AssumeRoleFailed(Exception):
     """The input's role could not be assumed; the run must not continue."""
 
@@ -200,6 +232,9 @@ def aws_authenticate(helper, aws_access_key_id=None, aws_secret_access_key=None,
     """
     aws_session_token = None
     region = "us-east-1"
+    # The Proxy tab's proxy, for STS and Support alike. Neither client used to
+    # get one, so a configured proxy was ignored and every call went direct.
+    config = aws_config(helper.session_key, warn=helper.logger.warning, info=helper.logger.info)
 
     if role_arn:
         try:
@@ -211,6 +246,7 @@ def aws_authenticate(helper, aws_access_key_id=None, aws_secret_access_key=None,
                 aws_access_key_id=aws_access_key_id,
                 aws_secret_access_key=aws_secret_access_key,
                 endpoint_url=endpoint_url("sts"),
+                config=config,
             ).assume_role(
                 RoleArn=role_arn,
                 RoleSessionName="splunk",
@@ -238,6 +274,7 @@ def aws_authenticate(helper, aws_access_key_id=None, aws_secret_access_key=None,
             aws_secret_access_key=aws_secret_access_key,
             aws_session_token=aws_session_token,
             endpoint_url=support_endpoint,
+            config=config,
         )
         return aws_client
     except EndpointConnectionError as e:
