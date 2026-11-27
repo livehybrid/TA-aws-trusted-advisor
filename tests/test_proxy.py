@@ -235,9 +235,11 @@ def test_getchecks_command_goes_through_the_proxy(phases):
 
 def test_assume_role_goes_through_the_proxy_too(phases):
     p = phases["https_auth"]
-    ops = [r.get("operation") for r in p["calls"]]
-    assert "AssumeRole" in ops and any(o and o != "AssumeRole" for o in ops), (
-        f"expected AssumeRole and Support calls through the proxy, got {ops}" + _diag(p))
+    assumes = [r for r in p["calls"] if r.get("operation") == "AssumeRole"]
+    signed = [r for r in p["calls"] if r.get("operation") not in (None, "AssumeRole")]
+    assert assumes and signed, f"expected AssumeRole and calls with its credentials, got {p['calls']}" + _diag(p)
+    direct = [r for r in assumes if r.get("client") != phases["ips"]["proxy"] or not r.get("tls")]
+    assert not direct, f"STS AssumeRole went direct: {direct}" + _diag(p)
 
 
 def test_http_calls_go_through_the_proxy(phases, splunk):
