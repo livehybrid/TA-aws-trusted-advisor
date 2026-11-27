@@ -51,3 +51,7 @@ README.html
 package/README.md
 splunksplwrapper.log
 pytest_splunk_addon.log
+
+# Playwright
+e2e/node_modules/
+e2e/e2e-results/

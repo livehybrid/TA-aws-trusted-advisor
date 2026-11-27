@@ -64,6 +64,15 @@ jobs:
         splunk: ["10.0", "10.6.0"]
     steps:
       - uses: actions/checkout@v7
+      # Splunk refuses searches below 5 GB free in its dispatch dir, and the
+      # runner image plus two Splunk images left the 10.6.0 leg under that
+      # (TA-aws-health, 26 Nov 2026). Drop preinstalled toolchains this job
+      # never uses.
+      - name: Free runner disk
+        run: |
+          df -h / | tail -1
+          sudo rm -r -f /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL || true
+          df -h / | tail -1
       - uses: actions/setup-python@v7
         with:
           python-version: "3.11"
@@ -94,6 +103,39 @@ jobs:
           MOCK_AWS_URL: http://127.0.0.1:8080
           MOCK_AWS_URL_FROM_SPLUNK: http://mockaws:8080
         run: pytest tests/ -v -ra
+
+      # Browser checks of the UCC Configuration and Inputs pages, on the same
+      # Splunk (after pytest, so neither suite sees the other's inputs).
+      - name: Setup Node
+        if: ${{ !cancelled() }}
+        uses: actions/setup-node@v7
+        with:
+          node-version: "20"
+
+      - name: Install Playwright
+        if: ${{ !cancelled() }}
+        working-directory: e2e
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+
+      - name: Browser tests (Playwright)
+        if: ${{ !cancelled() }}
+        working-directory: e2e
+        env:
+          SPLUNK_WEB_URL: http://localhost:8000
+          SPLUNK_MGMT_URL: https://localhost:8089
+          SPLUNK_USER: admin
+          SPLUNK_PASSWORD: Changeme1!
+        run: npx playwright test
+
+      - name: Upload Playwright screenshots and traces
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: e2e-results-${{ matrix.splunk }}
+          path: e2e/e2e-results/
+          if-no-files-found: ignore
 
       - name: Inputs ran on the expected Python
         # 10.2+ must honour python.required = 3.13; 10.0 ignores it and runs 3.9.
