@@ -26,7 +26,7 @@ const FIELDS = {
 };
 const VALUES = {
     aws_trusted_advisor: {
-        create: { interval: '3600', index: 'main', aws_access_key: 'AKIAE2EDUMMY00000001' },
+        create: { interval: '3600', index: 'main' },
         edit: { interval: '7200', role_arn: 'arn:aws:iam::111111111111:role/e2e-dummy' },
     },
 };
@@ -68,21 +68,26 @@ const service = GC.pages.inputs.services.find((s) => s.name === SERVICE);
 test(`${SERVICE}: create, disable, enable, edit and delete; the secret key never comes back`, async ({ page }) => {
     const errs = ucc.watchAppErrors(page, APP);
     const name = `e2e_${SERVICE}_${Date.now().toString(36)}`;
-    const secret = `e2eDummySecret${Math.random().toString(36).slice(2)}`;
+    // Both keys are encrypted fields in this add-on (its collector reads both
+    // from storage/passwords). Dummies, unique per run.
+    const secrets = { aws_access_key: `AKIAE2E${Math.random().toString(36).slice(2, 12).toUpperCase()}`,
+        aws_secret_key: `e2eDummySecret${Math.random().toString(36).slice(2)}` };
+    const secret = secrets.aws_secret_key;
     const { create, edit } = VALUES[SERVICE];
-    const check = { app: APP, conf: 'inputs', stanza: `${SERVICE}://${name}`, credStanza: name,
-        realms: [`__REST_CREDENTIAL__#${APP}#data/inputs/${SERVICE}`], field: 'aws_secret_key', secret,
-        handlerPath: `/servicesNS/nobody/${APP}/${GC.meta.restRoot}_${SERVICE}/${name}` };
+    const checkFor = (field) => ({ app: APP, conf: 'inputs', stanza: `${SERVICE}://${name}`, credStanza: name,
+        realms: [`__REST_CREDENTIAL__#${APP}#data/inputs/${SERVICE}`], field, secret: secrets[field],
+        handlerPath: `/servicesNS/nobody/${APP}/${GC.meta.restRoot}_${SERVICE}/${name}` });
+    const checkAll = async () => { for (const f of Object.keys(secrets)) await ucc.expectSecretNotEchoed(page, rest, checkFor(f)); };
     try {
         await ucc.gotoUccPage(page, APP, 'inputs', PAGE_TITLE);
 
         const d = await ucc.openCreateInput(page, service.title);
-        await fillTexts(d, label, { name, ...create, aws_secret_key: secret });
+        await fillTexts(d, label, { name, ...create, ...secrets });
         await ucc.submitDialog(page, 'Add');
         await expect(ucc.inputRow(page, name)).toBeVisible();
         const made = await ucc.expectConf(() => stanza(name), (c) => c !== null, `[${SERVICE}://${name}] created`);
         for (const [f, v] of Object.entries(create)) expect(made[f], `created ${f}`).toBe(v);
-        await ucc.expectSecretNotEchoed(page, rest, check);
+        await checkAll();
 
         // The Status switch must show what splunkd will run. data/inputs applies
         // the scheme-level [<service>] stanza in default/inputs.conf, which
@@ -100,26 +105,26 @@ test(`${SERVICE}: create, disable, enable, edit and delete; the secret key never
 
         await page.reload();
         await expect(ucc.inputRow(page, name)).toBeVisible();
-        expect.soft(await ucc.domHolds(page, secret), 'secret key in the DOM after reload').toBe(false);
+        expect.soft(await ucc.domHolds(page, secret) || await ucc.domHolds(page, secrets.aws_access_key), 'a key in the DOM after reload').toBe(false);
 
         await ucc.rowAction(page, name, 'Edit');
         const e = ucc.dialog(page);
         await expect(e).toBeVisible();
         for (const [f, v] of Object.entries(create)) expect(await ucc.readText(e, label(f)), `edit shows ${f}`).toBe(v);
-        expect.soft(await ucc.domHolds(page, secret), 'secret key in the edit dialog').toBe(false);
+        expect.soft(await ucc.domHolds(page, secret) || await ucc.domHolds(page, secrets.aws_access_key), 'a key in the edit dialog').toBe(false);
         await fillTexts(e, label, edit);
         await ucc.submitDialog(page, 'Update');
         const after = await ucc.expectConf(() => stanza(name),
             (c) => c && Object.entries(edit).every(([f, v]) => c[f] === v), 'edited values saved');
         for (const [f, v] of Object.entries({ ...create, ...edit })) expect(after[f], `after edit ${f}`).toBe(v);
         // The secret survives an edit that did not touch it.
-        await ucc.expectSecretNotEchoed(page, rest, check);
+        await checkAll();
 
         await ucc.rowAction(page, name, 'Delete');
         await ucc.submitDialog(page, 'Delete');
         await expect(ucc.inputRow(page, name)).toHaveCount(0);
         await ucc.expectConf(() => stanza(name), (c) => c === null, `[${SERVICE}://${name}] removed`);
-        await ucc.expectSecretGone(rest, { app: APP, conf: 'inputs', stanza: name, realms: check.realms });
+        await ucc.expectSecretGone(rest, { app: APP, conf: 'inputs', stanza: name, realms: checkFor('aws_secret_key').realms });
         errs.assertNone();
     } finally {
         await rest.deleteInput(APP, SERVICE, name);
