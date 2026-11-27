@@ -15,8 +15,6 @@ import boto3
 from collections import OrderedDict
 from aws_endpoint import endpoint_url
 from aws_proxy import botocore_proxies, describe as describe_proxy
-from botocore.config import Config
-from solnlib import conf_manager
 
 APP = "TA-aws-trusted-advisor"
 SETTINGS_CONF = "ta_aws_trusted_advisor_settings"
@@ -195,6 +193,8 @@ def newer_timestamp(checkpoint, timestamp):
 
 def read_proxy_settings(session_key, warn=None):
     """The Proxy tab's [proxy] stanza, password decrypted; {} when there is none."""
+    from solnlib import conf_manager  # here, so tests can import this module without solnlib
+
     try:
         cfm = conf_manager.ConfManager(
             session_key, APP,
@@ -216,6 +216,8 @@ def aws_config(session_key, warn=None, info=None):
         return None
     if info:
         info("Calling AWS through proxy {}".format(describe_proxy(proxies)))
+    from botocore.config import Config
+
     return Config(proxies=proxies)
 
 
