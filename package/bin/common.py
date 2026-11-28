@@ -7,7 +7,6 @@ Common functions used across both inputs.
 import datetime
 import logging
 import re
-import splunk.entity as entity
 import splunk.rest
 import json
 import os, sys, logging as logger
@@ -15,6 +14,7 @@ import boto3
 from collections import OrderedDict
 from aws_endpoint import endpoint_url
 from aws_proxy import botocore_proxies, describe as describe_proxy
+from botocore_socks import BotocoreSocksError, enable_socks
 
 APP = "TA-aws-trusted-advisor"
 SETTINGS_CONF = "ta_aws_trusted_advisor_settings"
@@ -38,10 +38,33 @@ def get_session_key():
         return session_key
 
 
-def get_credentials(session_key, owner, namespace, log_level=logger.INFO):
+# Where UCC stores an input's encrypted fields (aws_access_key, aws_secret_key):
+# one credential per input, user name = the input's name, JSON password.
+INPUT_REALM = "__REST_CREDENTIAL__#{}#data/inputs/aws_trusted_advisor".format(APP)
+
+
+def input_keys(session_key, input_name):
+    """(access key, secret key) stored for one input, or (None, None) when it has none.
+
+    Picked by realm and input name. Never by position: the add-on's app holds
+    other secrets too (the Proxy tab's password, listed before the inputs'),
+    and the search's app may not be this one at all.
     """
+    from solnlib import credentials  # here, so tests can import this module without solnlib
+
+    try:
+        stored = credentials.CredentialManager(session_key, APP, realm=INPUT_REALM).get_password(input_name)
+    except credentials.CredentialNotExistException:
+        return None, None  # no keys on the input: boto3's default chain (instance profile)
+    keys = json.loads(stored)
+    return keys.get("aws_access_key") or None, keys.get("aws_secret_key") or None
+
+
+def get_credentials(session_key, log_level=logger.INFO):
+    """
+    The first input's AWS keys and role, for the getchecks search command.
     :param session_key:
-    :return: AWS Keys
+    :return: (access key, secret key, role_arn); None for any not set
     """
     logger.basicConfig(
         level=log_level,
@@ -71,24 +94,12 @@ def get_credentials(session_key, owner, namespace, log_level=logger.INFO):
         return None, None, None
 
     try:
-        # list all credentials
-        entities = entity.getEntities(
-            ["admin", "passwords"],
-            namespace=namespace,
-            owner=owner,
-            sessionKey=session_key,
-        )
-    except Exception as unknown_exception:
-        raise Exception("Could not get %s credentials from splunk. Error: %s" % ("AWS_Trusted_Advisor", str(unknown_exception)))
-    # grab first set of credentials
-    if entities:
-        for i, stanza in entities.items():
-            if stanza["eai:acl"]["app"] == namespace:
-                cred = json.loads(stanza["clear_password"])
-                return cred["aws_access_key"], cred["aws_secret_key"], input_role_arn
-    else:
-        logger.warning("Unable to find any entities")
-        return None, None, input_role_arn
+        access_key, secret_key = input_keys(session_key, input_name)
+    except Exception as e:
+        raise Exception("Could not get the AWS keys of input {} from splunk. Error: {}".format(input_name, e))
+    if not access_key:
+        logger.warning("Input {} has no stored AWS keys; using boto3's default credentials".format(input_name))
+    return access_key, secret_key, input_role_arn
 
 
 def make_error_message(message, session_key, filename):
@@ -210,7 +221,11 @@ def read_proxy_settings(session_key, warn=None):
 
 
 def aws_config(session_key, warn=None, info=None):
-    """botocore Config carrying the Proxy tab's proxy, or None for no proxy."""
+    """botocore Config carrying the Proxy tab's proxy, or None for no proxy.
+
+    A SOCKS proxy also needs botocore_socks.enable_socks(client) on each
+    client built with it.
+    """
     proxies = botocore_proxies(read_proxy_settings(session_key, warn), warn=warn)
     if not proxies:
         return None
@@ -221,7 +236,11 @@ def aws_config(session_key, warn=None, info=None):
     return Config(proxies=proxies)
 
 
-class AssumeRoleFailed(Exception):
+class CollectorSetupFailed(Exception):
+    """The AWS clients could not be set up as configured; the run must not continue."""
+
+
+class AssumeRoleFailed(CollectorSetupFailed):
     """The input's role could not be assumed; the run must not continue."""
 
 
@@ -240,7 +259,7 @@ def aws_authenticate(helper, aws_access_key_id=None, aws_secret_access_key=None,
 
     if role_arn:
         try:
-            sts_response = boto3.client(
+            sts_client = boto3.client(
                 "sts",
                 # A region is required once endpoint_url is set (botocore raises
                 # NoRegionError before sending anything); us-east-1 as for Support.
@@ -249,7 +268,9 @@ def aws_authenticate(helper, aws_access_key_id=None, aws_secret_access_key=None,
                 aws_secret_access_key=aws_secret_access_key,
                 endpoint_url=endpoint_url("sts"),
                 config=config,
-            ).assume_role(
+            )
+            enable_socks(sts_client)  # a SOCKS proxy, if that is what is configured
+            sts_response = sts_client.assume_role(
                 RoleArn=role_arn,
                 RoleSessionName="splunk",
                 DurationSeconds=900,  # min 900 max inf
@@ -278,7 +299,11 @@ def aws_authenticate(helper, aws_access_key_id=None, aws_secret_access_key=None,
             endpoint_url=support_endpoint,
             config=config,
         )
+        # Fails closed: a SOCKS proxy this botocore cannot use is an error, never direct.
+        enable_socks(aws_client)
         return aws_client
+    except BotocoreSocksError as e:
+        raise CollectorSetupFailed("Cannot use the SOCKS proxy: {}".format(e)) from e
     except EndpointConnectionError as e:
         message = "{}".format(e)
         helper.logger.critical(message)

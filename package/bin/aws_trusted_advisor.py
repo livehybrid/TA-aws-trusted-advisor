@@ -6,7 +6,6 @@ import json
 from splunklib import modularinput as smi
 from solnlib import conf_manager
 from solnlib import log
-from solnlib import credentials
 from common import *
 
 
@@ -73,15 +72,6 @@ class AWS_TRUSTED_ADVISOR(smi.Script):
             logger.error("Failed to fetch the log details from the configuration taking INFO as default level.")
             return "INFO"
 
-    def get_account_credentials(self, input_name):
-        realm = f"__REST_CREDENTIAL__#TA-aws-trusted-advisor#data/inputs/aws_trusted_advisor"
-        creds = credentials.CredentialManager(
-            self.session_key,
-            self.appName,
-            realm=realm,
-        )
-        return creds.get_password(input_name)
-
     def stream_events(self, inputs, ew):
         self.context_meta = inputs.metadata
         self.session_key = inputs.metadata["session_key"]
@@ -102,19 +92,20 @@ class AWS_TRUSTED_ADVISOR(smi.Script):
             logger.setLevel(log_level)
             self.logger = logger
             try:
-                aws_credentials = json.loads(self.get_account_credentials(input_name=input_name))
-                access_key = aws_credentials["aws_access_key"]
-                secret_key = aws_credentials["aws_secret_key"]
+                # This input's own keys, by realm and input name (as getchecks).
+                access_key, secret_key = input_keys(self.session_key, input_name)
             except Exception:
-                # No stored keys: boto3's default chain (e.g. instance profile).
+                # Unreadable keys: boto3's default chain (e.g. instance profile).
                 access_key, secret_key = None, None
             try:
                 aws_client = aws_authenticate(
                     self, access_key, secret_key, role_arn=input_item.get("role_arn", None)
                 )
-            except AssumeRoleFailed as e:
-                # Logged, nothing written to the event stream, no fallback to
-                # the base credentials; the next input (if any) still runs.
+            except CollectorSetupFailed as e:
+                # A refused role or an unusable SOCKS proxy. Logged, nothing
+                # written to the event stream, no fallback to the base
+                # credentials or to a direct connection; the next input (if
+                # any) still runs.
                 logger.error("input={} {}".format(input_name, e))
                 continue
 
