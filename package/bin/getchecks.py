@@ -11,6 +11,7 @@ import boto3
 import common
 from botocore.exceptions import EndpointConnectionError
 from botocore.exceptions import ClientError
+from botocore_socks import BotocoreSocksError, enable_socks
 import logging as logger
 import os
 
@@ -45,13 +46,9 @@ if __name__ == "__main__":
 
     splunk_results, unused1, settings = splunk.Intersplunk.getOrganizedResults()
     splunk_session_key = settings.get("sessionKey", None)
-    owner = settings.get("owner", "admin")
-    namespace = settings.get("namespace", "search")
-    aws_access_key_id, aws_secret_access_key, role_arn = common.get_credentials(splunk_session_key, owner, namespace)
-    if aws_access_key_id == "":
-        aws_access_key_id = None
-    if aws_secret_access_key == "":
-        aws_secret_access_key = None
+    # The first input's own keys, picked by realm and input name (not the
+    # first secret in the search's app, which may be the proxy password).
+    aws_access_key_id, aws_secret_access_key, role_arn = common.get_credentials(splunk_session_key)
     aws_session_token = None
     region = "us-east-1"
     # The Proxy tab's proxy, as the input uses it.
@@ -60,10 +57,12 @@ if __name__ == "__main__":
         if role_arn:
             try:
                 audit_sts_client = boto3.client("sts")
-                sts_response = boto3.client(
+                sts_client = boto3.client(
                     "sts", aws_access_key_id=aws_access_key_id, aws_secret_access_key=aws_secret_access_key, aws_session_token=aws_session_token,
                     endpoint_url=common.endpoint_url("sts"), config=config,
-                ).assume_role(
+                )
+                enable_socks(sts_client)
+                sts_response = sts_client.assume_role(
                     RoleArn=role_arn, RoleSessionName="splunk", DurationSeconds=900  # min 900 max inf
                 )
 
@@ -81,6 +80,7 @@ if __name__ == "__main__":
             "support", region_name=region, aws_access_key_id=aws_access_key_id, aws_secret_access_key=aws_secret_access_key, aws_session_token=aws_session_token,
             endpoint_url=common.endpoint_url("support"), config=config,
         )
+        enable_socks(client)  # a SOCKS proxy, if that is what is configured; fails closed
         checks = client.describe_trusted_advisor_checks(language="en")["checks"]
         output = get_checks(checks)
         splunk_results = output
@@ -90,4 +90,7 @@ if __name__ == "__main__":
         common.make_error_message(message, splunk_session_key, "getchecks.py")
     except ClientError as e:
         message = "{}".format(e)
+        common.make_error_message(message, splunk_session_key, "getchecks.py")
+    except BotocoreSocksError as e:
+        message = "Cannot use the SOCKS proxy: {}".format(e)
         common.make_error_message(message, splunk_session_key, "getchecks.py")
