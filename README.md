@@ -92,7 +92,7 @@ It is possible to run the modular input section of the app on a heavy-forwarder 
 *AWS Access Key*: The Access Key of the IAM user to use to connect, not required if you're running on your Splunk instance on AWS using an [Instance Profile](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_use_switch-role-ec2_instance-profiles.html)  
 *AWS Secret Key*: As above  
 *Role ARN*: Set this to an AWS IAM Role ARN if your IAM User/Instance Profile is required to assume a different role to access Trusted Advisor (e.g. accessing other accounts).  
-If the role cannot be assumed, that input logs `Could not assume role_arn=...` and collects nothing for the run. It does not fall back to the access keys or instance profile, which would collect as a different principal.  
+If the role cannot be assumed, that input logs `Could not assume role_arn=...` and collects nothing for the run. It does not fall back to the access keys or instance profile, which would collect as a different principal. `| getchecks` behaves the same way: it stops with that error in the search.  
 <img src="package/appserver/static/img/screenshot-app-config-input.png" width="200" />
 
 4. Enable the saved search "Trusted Advisor Checks Lookup Populator" - This is used to generate the metadata used in the dashboards to display the various Trusted Advisor checks.  
@@ -102,6 +102,11 @@ If the role cannot be assumed, that input logs `Could not assume role_arn=...` a
 <img src="package/appserver/static/img/screenshot-lookup-populator.png" width="200" />
 
 6. If you are using a custom index (default is `main`), update the `trusted-advisor-index` macro.  
+
+### Proxy
+Configuration > Proxy sends every AWS call (STS and Support, from the input and from `| getchecks`) through an HTTP, SOCKS4 or SOCKS5 proxy. Tick "Remote DNS resolution" to have a SOCKS proxy resolve the AWS host names.
+
+Proxy handling fails closed. The add-on connects directly only when Enable is unticked (or the Proxy tab has never been saved). When Enable is ticked but the settings are incomplete or invalid (no host or port, a port outside 1 to 65535, an unsupported type, a user name without a password or the reverse), or when the proxy settings cannot be read at all (for example a stored password that cannot be decrypted), the input and `| getchecks` make no AWS call at all, not even a direct one. The input logs `input=<name> Proxy settings unusable: <reason>` to `ta-aws-trusted-advisor_input.log`, and `| getchecks` stops with the same error in the search.
 
 ### Custom AWS endpoint (advanced, optional)
 By default the add-on calls the public AWS endpoints. To route it through a VPC interface endpoint or an internal gateway, create `local/ta_aws_trusted_advisor_endpoints.conf`:
@@ -129,7 +134,7 @@ If this is empty, try running the "Populator" saved search, or manually run `| g
 
 2. Check that the `trusted-advisor-index` macro is referencing the index that you are storing your data in. If there is no data in the expected index, check the input is enabled and the details are correct. Failing this, check the _internal logs (see below).
 
-3. Internal logs - Check `index=_internal source=*ta-aws-trusted-advisor*` for any errors (the collector logs to `$SPLUNK_HOME/var/log/splunk/ta-aws-trusted-advisor_input.log`). A refused role or bad credentials are logged there with `input=<name>`.  
+3. Internal logs - Check `index=_internal source=*ta-aws-trusted-advisor*` for any errors (the collector logs to `$SPLUNK_HOME/var/log/splunk/ta-aws-trusted-advisor_input.log`). A refused role, bad credentials or unusable proxy settings are logged there with `input=<name>`.  
 The most common cause of error is that the IAM User credentials are incorrect or the User/Role/Profile does not have the required permissions.
 
 4. Manually execute the modular input to check if the script runs correctly:

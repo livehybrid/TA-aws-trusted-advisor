@@ -32,8 +32,8 @@ ASIA... key id must carry the session token issued with that key, or it gets
 403 UnrecognizedClientException. So "the role's credentials were used" is
 something the mock checks, not something the collector reports.
 
-SigV4 is not verified (botocore signs, nobody checks), but the access key id
-and signing service from the Authorization header, and any
+SigV4 is not verified (botocore signs, nobody checks), but the access key id,
+signing region and signing service from the Authorization header, and any
 X-Amz-Security-Token, are recorded, so a test can prove which credentials
 reached the wire. AssumeRole entries also record the credentials issued.
 
@@ -551,6 +551,7 @@ class Handler(BaseHTTPRequestHandler):
         auth = self.headers.get("Authorization", "")
         scope = auth.split("Credential=", 1)[1].split(",", 1)[0].split("/") if "Credential=" in auth else []
         key_id = scope[0] if scope else None
+        signing_region = scope[2] if len(scope) > 2 else None
         signing_service = scope[3] if len(scope) > 3 else None
         token = self.headers.get("X-Amz-Security-Token")
         try:
@@ -568,7 +569,7 @@ class Handler(BaseHTTPRequestHandler):
             err = None
         entry = {"protocol": proto, "service": prefix, "operation": op,
                  "params": _plain(params), "access_key_id": key_id,
-                 "signing_service": signing_service, "session_token": token,
+                 "signing_service": signing_service, "signing_region": signing_region, "session_token": token,
                  "client": self.client_address[0], "tls": isinstance(self.connection, ssl.SSLSocket),
                  "path": self.path}
         with LOCK:

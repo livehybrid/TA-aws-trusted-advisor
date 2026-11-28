@@ -13,7 +13,7 @@ import os, sys, logging as logger
 import boto3
 from collections import OrderedDict
 from aws_endpoint import endpoint_url
-from aws_proxy import botocore_proxies, describe as describe_proxy
+from aws_proxy import ProxySettingsError, botocore_proxies, describe as describe_proxy
 from botocore_socks import BotocoreSocksError, enable_socks
 
 APP = "TA-aws-trusted-advisor"
@@ -202,8 +202,36 @@ def newer_timestamp(checkpoint, timestamp):
     return bool(timestamp_dt > checkpoint_dt)
 
 
-def read_proxy_settings(session_key, warn=None):
-    """The Proxy tab's [proxy] stanza, password decrypted; {} when there is none."""
+class CollectorSetupFailed(Exception):
+    """The AWS clients could not be set up as configured; the run must not continue."""
+
+
+class AssumeRoleFailed(CollectorSetupFailed):
+    """The input's role could not be assumed; the run must not continue."""
+
+
+class ProxyUnusable(CollectorSetupFailed):
+    """The proxy is, or may be, enabled but cannot be used; nothing may go direct."""
+
+
+# The Support API (Trusted Advisor) is served from us-east-1 only. STS gets the
+# same region: botocore needs one as soon as an endpoint override is set
+# (NoRegionError before anything is sent), and us-east-1 also serves the
+# global STS endpoint.
+REGION = "us-east-1"
+
+
+def read_proxy_settings(session_key):
+    """The Proxy tab's [proxy] stanza, password decrypted.
+
+    Raises ProxySettingsError whenever the stanza cannot be read. The add-on
+    ships [proxy] in default/ta_aws_trusted_advisor_settings.conf (Enable
+    empty), so "never configured" is that stanza, not a missing one: a missing
+    stanza or conf file, a password placeholder with no stored secret, an ACL
+    that hides the conf, or splunkd failing the request all mean the settings
+    are unknown, and calling AWS direct could bypass a proxy that is switched
+    on. aws_proxy.botocore_proxies then decides between proxy and direct.
+    """
     from solnlib import conf_manager  # here, so tests can import this module without solnlib
 
     try:
@@ -211,22 +239,26 @@ def read_proxy_settings(session_key, warn=None):
             session_key, APP,
             realm="__REST_CREDENTIAL__#{}#configs/conf-{}".format(APP, SETTINGS_CONF),
         )
-        return cfm.get_conf(SETTINGS_CONF).get("proxy") or {}
-    except (conf_manager.ConfStanzaNotExistException, conf_manager.ConfManagerException):
-        return {}  # never configured
+        return cfm.get_conf(SETTINGS_CONF).get("proxy")
     except Exception as e:
-        if warn:
-            warn("Could not read the proxy settings ({}); calling AWS without a proxy".format(e))
-        return {}
+        raise ProxySettingsError("cannot read the [proxy] stanza of {}.conf ({}: {})".format(
+            SETTINGS_CONF, type(e).__name__, e)) from e
 
 
-def aws_config(session_key, warn=None, info=None):
-    """botocore Config carrying the Proxy tab's proxy, or None for no proxy.
+def aws_config(session_key, info=None):
+    """botocore Config carrying the Proxy tab's proxy, or None when the proxy is
+    explicitly off.
+
+    :raises ProxyUnusable: the settings cannot be read, or the proxy is enabled
+        but incomplete or invalid. Never falls back to calling AWS direct.
 
     A SOCKS proxy also needs botocore_socks.enable_socks(client) on each
     client built with it.
     """
-    proxies = botocore_proxies(read_proxy_settings(session_key, warn), warn=warn)
+    try:
+        proxies = botocore_proxies(read_proxy_settings(session_key))
+    except ProxySettingsError as e:
+        raise ProxyUnusable(str(e)) from e
     if not proxies:
         return None
     if info:
@@ -236,34 +268,30 @@ def aws_config(session_key, warn=None, info=None):
     return Config(proxies=proxies)
 
 
-class CollectorSetupFailed(Exception):
-    """The AWS clients could not be set up as configured; the run must not continue."""
+def support_client(session_key, aws_access_key_id=None, aws_secret_access_key=None, role_arn="", log=None):
+    """The Support (Trusted Advisor) client as configured, for the modular
+    input and the getchecks command alike, so the two cannot drift.
 
+    Through the Proxy tab's proxy (STS too), and with the role's temporary
+    credentials when role_arn is set.
 
-class AssumeRoleFailed(CollectorSetupFailed):
-    """The input's role could not be assumed; the run must not continue."""
-
-
-def aws_authenticate(helper, aws_access_key_id=None, aws_secret_access_key=None, role_arn=""):
-    """
-    Authenticates against AWS
-    :return: aws_client
-    :raises AssumeRoleFailed: role_arn is set and STS refused it. Never falls
-        back to the base credentials, which would collect as another principal.
+    :param log: a logger (info/debug), or None
+    :raises CollectorSetupFailed: ProxyUnusable (proxy settings unreadable,
+        or enabled but unusable), AssumeRoleFailed (role_arn set and STS
+        refused it or could not be reached) or a SOCKS proxy this botocore
+        cannot use. Never falls back to a direct connection or to the base
+        credentials, which would collect as another principal.
     """
     aws_session_token = None
-    region = "us-east-1"
     # The Proxy tab's proxy, for STS and Support alike. Neither client used to
     # get one, so a configured proxy was ignored and every call went direct.
-    config = aws_config(helper.session_key, warn=helper.logger.warning, info=helper.logger.info)
+    config = aws_config(session_key, info=log.info if log else None)
 
     if role_arn:
         try:
             sts_client = boto3.client(
                 "sts",
-                # A region is required once endpoint_url is set (botocore raises
-                # NoRegionError before sending anything); us-east-1 as for Support.
-                region_name=region,
+                region_name=REGION,
                 aws_access_key_id=aws_access_key_id,
                 aws_secret_access_key=aws_secret_access_key,
                 endpoint_url=endpoint_url("sts"),
@@ -278,38 +306,41 @@ def aws_authenticate(helper, aws_access_key_id=None, aws_secret_access_key=None,
         except Exception as e:
             # Never print here: stdout is the XML event stream to splunkd.
             raise AssumeRoleFailed("Could not assume role_arn={}: {}".format(role_arn, e)) from e
-        helper.logger.info("Created STS Client and assumed role={}".format(role_arn))
+        if log:
+            log.info("Created STS Client and assumed role={}".format(role_arn))
         sts_credentials = sts_response["Credentials"]
         aws_access_key_id = sts_credentials["AccessKeyId"]
         aws_secret_access_key = sts_credentials["SecretAccessKey"]
         aws_session_token = sts_credentials["SessionToken"]
-        helper.logger.debug("Assumed role={}".format(role_arn))
 
     # Optional override (local/ta_aws_trusted_advisor_endpoints.conf); None = real AWS.
     support_endpoint = endpoint_url("support")
-    if support_endpoint:
-        helper.logger.info("Using support endpoint_url={}".format(support_endpoint))
+    if support_endpoint and log:
+        log.info("Using support endpoint_url={}".format(support_endpoint))
+    aws_client = boto3.client(
+        "support",
+        region_name=REGION,
+        aws_access_key_id=aws_access_key_id,
+        aws_secret_access_key=aws_secret_access_key,
+        aws_session_token=aws_session_token,
+        endpoint_url=support_endpoint,
+        config=config,
+    )
     try:
-        aws_client = boto3.client(
-            "support",
-            region_name=region,
-            aws_access_key_id=aws_access_key_id,
-            aws_secret_access_key=aws_secret_access_key,
-            aws_session_token=aws_session_token,
-            endpoint_url=support_endpoint,
-            config=config,
-        )
         # Fails closed: a SOCKS proxy this botocore cannot use is an error, never direct.
         enable_socks(aws_client)
-        return aws_client
     except BotocoreSocksError as e:
         raise CollectorSetupFailed("Cannot use the SOCKS proxy: {}".format(e)) from e
-    except EndpointConnectionError as e:
-        message = "{}".format(e)
-        helper.logger.critical(message)
-    except ClientError as e:
-        message = "{}".format(e)
-        helper.logger.critical(message)
+    return aws_client
+
+
+def aws_authenticate(helper, aws_access_key_id=None, aws_secret_access_key=None, role_arn=""):
+    """The modular input's Support client (see support_client).
+
+    :raises CollectorSetupFailed: as support_client.
+    """
+    return support_client(helper.session_key, aws_access_key_id, aws_secret_access_key,
+                          role_arn=role_arn, log=helper.logger)
 
 
 def get_trusted_advisor_checks(client):

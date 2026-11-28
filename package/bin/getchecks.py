@@ -7,11 +7,7 @@ import import_declare_test
 import splunk.Intersplunk
 import splunk.rest
 from splunk.clilib import cli_common as cli
-import boto3
 import common
-from botocore.exceptions import EndpointConnectionError
-from botocore.exceptions import ClientError
-from botocore_socks import BotocoreSocksError, enable_socks
 import logging as logger
 import os
 
@@ -42,55 +38,35 @@ def get_checks(results):
     return splunk.Intersplunk.outputResults(events)
 
 
+def fail(message, session_key):
+    """Stop the search with this error: in its log, as a Splunk message and as
+    the search's own error (not an empty result that looks like "no checks")."""
+    logger.error(message)
+    try:
+        common.make_error_message(message, session_key, "getchecks.py")
+    except Exception as e:  # the search error below must still be raised
+        logger.error("Could not post the Splunk message: {}".format(e))
+    splunk.Intersplunk.generateErrorResults("getchecks: {}".format(message))
+
+
 if __name__ == "__main__":
 
     splunk_results, unused1, settings = splunk.Intersplunk.getOrganizedResults()
     splunk_session_key = settings.get("sessionKey", None)
-    # The first input's own keys, picked by realm and input name (not the
-    # first secret in the search's app, which may be the proxy password).
-    aws_access_key_id, aws_secret_access_key, role_arn = common.get_credentials(splunk_session_key)
-    aws_session_token = None
-    region = "us-east-1"
-    # The Proxy tab's proxy, as the input uses it.
-    config = common.aws_config(splunk_session_key, warn=logger.warning)
     try:
-        if role_arn:
-            try:
-                audit_sts_client = boto3.client("sts")
-                sts_client = boto3.client(
-                    "sts", aws_access_key_id=aws_access_key_id, aws_secret_access_key=aws_secret_access_key, aws_session_token=aws_session_token,
-                    endpoint_url=common.endpoint_url("sts"), config=config,
-                )
-                enable_socks(sts_client)
-                sts_response = sts_client.assume_role(
-                    RoleArn=role_arn, RoleSessionName="splunk", DurationSeconds=900  # min 900 max inf
-                )
-
-                sts_credentials = sts_response["Credentials"]
-                aws_access_key_id = sts_credentials["AccessKeyId"]
-                aws_secret_access_key = sts_credentials["SecretAccessKey"]
-                aws_session_token = sts_credentials["SessionToken"]
-                logger.info("Assumed role={}".format(role_arn))
-
-            except Exception as e:
-                logger.critical("Could not assume role")
-                logger.critical(e)
-
-        client = boto3.client(
-            "support", region_name=region, aws_access_key_id=aws_access_key_id, aws_secret_access_key=aws_secret_access_key, aws_session_token=aws_session_token,
-            endpoint_url=common.endpoint_url("support"), config=config,
-        )
-        enable_socks(client)  # a SOCKS proxy, if that is what is configured; fails closed
+        # The first input's own keys, picked by realm and input name (not the
+        # first secret in the search's app, which may be the proxy password).
+        aws_access_key_id, aws_secret_access_key, role_arn = common.get_credentials(splunk_session_key)
+        # Built exactly as the modular input builds its client: the Proxy tab's
+        # proxy (refusing, never going direct, when it is unusable), and the
+        # role's credentials or nothing at all. A refused role used to be
+        # logged and the base keys used instead, which the input never does.
+        client = common.support_client(splunk_session_key, aws_access_key_id, aws_secret_access_key,
+                                       role_arn=role_arn, log=logger)
         checks = client.describe_trusted_advisor_checks(language="en")["checks"]
-        output = get_checks(checks)
-        splunk_results = output
-
-    except EndpointConnectionError as e:
-        message = "{}".format(e)
-        common.make_error_message(message, splunk_session_key, "getchecks.py")
-    except ClientError as e:
-        message = "{}".format(e)
-        common.make_error_message(message, splunk_session_key, "getchecks.py")
-    except BotocoreSocksError as e:
-        message = "Cannot use the SOCKS proxy: {}".format(e)
-        common.make_error_message(message, splunk_session_key, "getchecks.py")
+    except common.CollectorSetupFailed as e:
+        fail("{}".format(e), splunk_session_key)
+    except Exception as e:  # AWS refused or unreachable, keys unreadable, ...
+        fail("{}: {}".format(type(e).__name__, e), splunk_session_key)
+    else:
+        get_checks(checks)
