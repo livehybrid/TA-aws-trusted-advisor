@@ -126,15 +126,14 @@ def _refusals(splunk, input_name):
 
 
 def search_text(body):
-    """Every message and result value of a oneshot response as one string,
-    JSON-decoded (so the test does not depend on how splunkd escapes '/')."""
+    """The search's own messages (the errors a user sees above the results),
+    JSON-decoded so the test does not depend on how splunkd escapes '/'. A
+    result row that merely carries the text does not count."""
     try:
         doc = json.loads(body)
     except ValueError:
         return body
-    parts = [m.get("text", "") for m in doc.get("messages", []) or []]
-    parts += [str(v) for row in doc.get("results", []) or [] for v in row.values()]
-    return "\n".join(parts) or body
+    return "\n".join("{}: {}".format(m.get("type"), m.get("text", "")) for m in doc.get("messages", []) or [])
 
 
 def _getchecks(splunk):
