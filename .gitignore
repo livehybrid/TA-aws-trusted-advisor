@@ -57,3 +57,6 @@ pytest_splunk_addon.log
 # Playwright
 e2e/node_modules/
 e2e/e2e-results/
+
+# Shared UCC page helpers, installed in CI by livehybrid/deploy-splunk-app-action/playwright
+e2e/ucc/ucc-helpers.js
