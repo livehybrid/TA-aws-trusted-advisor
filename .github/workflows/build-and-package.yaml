@@ -24,20 +24,29 @@ concurrency:
   cancel-in-progress: ${{ github.ref != format('refs/heads/{0}', github.event.repository.default_branch) }}
 
 jobs:
+  # The Splunk versions CI tests and Splunkbase lists come from one file in
+  # livehybrid/deploy-splunk-app-action (splunk-versions.json).
+  splunk-versions:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.v.outputs.matrix }}
+    steps:
+      - id: v
+        uses: livehybrid/deploy-splunk-app-action/splunk-versions@v1
+
   package:
-    # ubuntu-24.04 because ubuntu-latest (26.04) has no Python 3.9, which the
-    # add-on build and Splunk 10.1-and-earlier parity need.
+    # ubuntu-24.04 because ubuntu-latest (26.04) has no Python 3.9.
     runs-on: ubuntu-24.04
     steps:
       - name: Package app
-        uses: livehybrid/deploy-splunk-app-action@main
+        uses: livehybrid/deploy-splunk-app-action@v1
         with:
           python-version: "3.9"
 
   appinspect:
     name: quality-appinspect
     needs: package
-    uses: livehybrid/deploy-splunk-app-action/.github/workflows/appinspect-cli.yml@main
+    uses: livehybrid/deploy-splunk-app-action/.github/workflows/appinspect-cli.yml@v1
     with:
       tags: "cloud,future,private_victoria"
     secrets:
@@ -47,32 +56,25 @@ jobs:
     name: quality-appinspect-api
     needs:
       - appinspect
-    uses: livehybrid/deploy-splunk-app-action/.github/workflows/appinspect-api.yml@main
+    uses: livehybrid/deploy-splunk-app-action/.github/workflows/appinspect-api.yml@v1
     secrets:
       splunkbase_username: ${{ secrets.SPLUNKBASE_USERNAME }}
       splunkbase_password: ${{ secrets.SPLUNKBASE_PASSWORD }}
   
   integration-test:
     name: integration-test (splunk-docker ${{ matrix.splunk }})
-    needs: package
+    needs: [package, splunk-versions]
     if: github.actor != 'dependabot[bot]'
     runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
       matrix:
-        # Oldest and newest Splunk this release claims on Splunkbase.
-        splunk: ["10.0", "10.6.0"]
+        # The supported floor and the newest Splunk (shared splunk-versions.json).
+        splunk: ${{ fromJSON(needs.splunk-versions.outputs.matrix) }}
     steps:
       - uses: actions/checkout@v7
-      # Splunk refuses searches below 5 GB free in its dispatch dir, and the
-      # runner image plus two Splunk images left the 10.6.0 leg under that
-      # (TA-aws-health, 26 Nov 2026). Drop preinstalled toolchains this job
-      # never uses.
       - name: Free runner disk
-        run: |
-          df -h / | tail -1
-          sudo rm -r -f /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL || true
-          df -h / | tail -1
+        uses: livehybrid/deploy-splunk-app-action/splunk-docker/free-disk@v1
       - uses: actions/setup-python@v7
         with:
           python-version: "3.11"
@@ -84,7 +86,7 @@ jobs:
         shell: bash
         run: |
           ucc-gen build --source package --ta-version 1.0.8
-          rm -rf stage && mkdir -p stage
+          rm -r -f stage && mkdir -p stage
           cp -r output/TA-aws-trusted-advisor stage/TA-aws-trusted-advisor
           # A throwaway TLS pair for the mock's https port: real AWS endpoints
           # are https, so tests/test_proxy.py needs the CONNECT path too.
@@ -93,13 +95,13 @@ jobs:
             -addext "subjectAltName=DNS:mockaws,DNS:mockaws-remote" \
             -keyout docker/mock/tls/key.pem -out docker/mock/tls/cert.pem
           chmod 644 docker/mock/tls/*.pem
-          chmod -R 777 stage/TA-aws-trusted-advisor
 
       - name: Start Splunk (wait for health)
-        working-directory: docker
-        env:
-          SPLUNK_IMAGE_TAG: ${{ matrix.splunk }}
-        run: docker compose up -d --wait --wait-timeout 360
+        uses: livehybrid/deploy-splunk-app-action/splunk-docker/start@v1
+        with:
+          version: ${{ matrix.splunk }}
+          app-dir: stage/TA-aws-trusted-advisor
+          app-dir-mode: "777"
 
       # botocore verifies TLS against certifi's bundle (Splunk's Python here:
       # boto3 is not vendored), so the mock's certificate goes into every
@@ -127,49 +129,23 @@ jobs:
 
       # Browser checks of the UCC Configuration and Inputs pages, on the same
       # Splunk (after pytest, so neither suite sees the other's inputs).
-      - name: Setup Node
-        if: ${{ !cancelled() }}
-        uses: actions/setup-node@v7
-        with:
-          node-version: "20"
-
-      - name: Install Playwright
-        if: ${{ !cancelled() }}
-        working-directory: e2e
-        run: |
-          npm ci
-          npx playwright install --with-deps chromium
-
       - name: Browser tests (Playwright)
         if: ${{ !cancelled() }}
-        working-directory: e2e
+        uses: livehybrid/deploy-splunk-app-action/playwright@v1
         env:
           SPLUNK_WEB_URL: http://localhost:8000
           SPLUNK_MGMT_URL: https://localhost:8089
           SPLUNK_USER: admin
           SPLUNK_PASSWORD: Changeme1!
-        run: npx playwright test
-
-      - name: Upload Playwright screenshots and traces
-        if: ${{ !cancelled() }}
-        uses: actions/upload-artifact@v7
         with:
-          name: e2e-results-${{ matrix.splunk }}
-          path: e2e/e2e-results/
-          if-no-files-found: ignore
+          ucc-helpers: ucc/ucc-helpers.js
+          artifact-name: e2e-results-${{ matrix.splunk }}
 
       - name: Inputs ran on the expected Python
-        # 10.2+ must honour python.required = 3.13; 10.0 ignores it and runs 3.9.
-        # Read from splunkd's own exec log, not from anything the add-on reports.
-        env:
-          WANT_313: ${{ matrix.splunk != '10.0' }}
-        run: |
-          lines=$(docker exec -u splunk ta_aws_trusted_advisor_splunk grep -h "ExecProcessor.*exec process: " /opt/splunk/var/log/splunk/splunkd.log | grep "/etc/apps/TA-aws-trusted-advisor/bin/" || true)
-          printf '%s\n' "$lines" | tail -n 20
-          [ -n "$lines" ] || { echo "::error::no ExecProcessor lines for TA-aws-trusted-advisor"; exit 1; }
-          if [ "$WANT_313" = true ]; then
-            if printf '%s\n' "$lines" | grep -v -q "python3\.13"; then echo "::error::an input did not run on python3.13"; exit 1; fi
-          elif printf '%s\n' "$lines" | grep -q "python3\.13"; then echo "::error::an input ran on python3.13 on Splunk 10.0"; exit 1; fi
+        uses: livehybrid/deploy-splunk-app-action/splunk-docker/expected-python@v1
+        with:
+          container: ta_aws_trusted_advisor_splunk
+          app: TA-aws-trusted-advisor
 
       - name: Diagnostics on failure
         if: failure()
@@ -183,10 +159,17 @@ jobs:
           echo; docker compose logs --tail 60 mockaws || true
           echo "--- proxy log"; docker logs ta_aws_trusted_advisor_proxy 2>&1 | tail -40 || true
 
+      - name: Splunk logs on failure
+        if: failure()
+        uses: livehybrid/deploy-splunk-app-action/splunk-docker/logs@v1
+        with:
+          services: splunk
+          container: ta_aws_trusted_advisor_splunk
+          tail: "200"
+
       - name: Tear down
         if: always()
-        working-directory: docker
-        run: docker compose down -v || true
+        uses: livehybrid/deploy-splunk-app-action/splunk-docker/teardown@v1
 
   publish-gh:
     permissions:
@@ -194,21 +177,21 @@ jobs:
     needs:
       - appinspect
       - integration-test
-    uses: livehybrid/deploy-splunk-app-action/.github/workflows/publish.yml@main
+    uses: livehybrid/deploy-splunk-app-action/.github/workflows/publish.yml@v1
 
   publish-splunkbase:
     # Tag runs only: needs the GitHub release (all CLI gates + integration)
     # and Splunk's hosted AppInspect. Uploads stay off until the repo variable
-    # SPLUNKBASE_PUBLISH_ENABLED=true.
+    # SPLUNKBASE_PUBLISH_ENABLED=true. The compatibility list is the shared
+    # splunk-versions.json, the same file the integration matrix uses.
     needs:
       - publish-gh
       - quality-appinspect-api
     permissions:
       contents: read
-    uses: livehybrid/deploy-splunk-app-action/.github/workflows/publish-splunkbase.yml@main
+    uses: livehybrid/deploy-splunk-app-action/.github/workflows/publish-splunkbase.yml@v1
     with:
       app_id: "4207"
-      splunk_versions: "10.6,10.5,10.4,10.3,10.2,10.1,10.0"
     secrets:
       splunkbase_username: ${{ secrets.SPLUNKBASE_USERNAME }}
       splunkbase_password: ${{ secrets.SPLUNKBASE_PASSWORD }}

@@ -19,10 +19,9 @@ jobs:
   publish:
     permissions:
       contents: read
-    uses: livehybrid/deploy-splunk-app-action/.github/workflows/publish-splunkbase.yml@main
+    uses: livehybrid/deploy-splunk-app-action/.github/workflows/publish-splunkbase.yml@v1
     with:
       app_id: "4207"
-      splunk_versions: "10.6,10.5,10.4,10.3,10.2,10.1,10.0"
       release_tag: ${{ inputs.tag }}
       dry_run: ${{ inputs.dry_run }}
       force: true

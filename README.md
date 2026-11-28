@@ -8,17 +8,15 @@ Version 1.2.0 (Released 27th Nov 2024) .
 
 | Attribute | Value |
 |-----------|-------|
-| **Python runtime** | 3.9, Splunk's long-term-support runtime (pinned) |
-| **Expected compatible** | Splunk Enterprise and Cloud 9.3+ and 10.x (any release on the Python 3.9 runtime) |
-| **Tested in CI** | Real-Splunk install/registration harness + AppInspect `cloud`, `future`, `private_victoria` on every push |
+| **Python runtime** | 3.13 (`python.required = 3.13` on the input and the `getchecks` search command) |
+| **Supported** | Splunk Enterprise and Cloud 10.4 and later |
+| **Tested in CI** | Real Splunk 10.4 and the newest 10.6 in Docker (collector, proxies, browser tests) + AppInspect `cloud`, `future`, `private_victoria` on every push |
 | **Deployment roles** | Standalone, Distributed, Search Head Clustering |
 
-Splunk 9.3 through 10.1 default to Python 3.9, and 3.9 stays the LTS runtime on
-10.2 and later, so an add-on clean on 3.9 runs unchanged across that range. This
-add-on pins the runtime to 3.9 (`python.required = 3.9` on the input, the
-`getchecks` search command and the REST handlers) and its vendored libraries to
-3.9-clean versions. It is not yet validated on the opt-in Python 3.13 runtime
-introduced in Splunk 10.2.
+Every supported Splunk honours `python.required = 3.13`, so the add-on runs on
+Python 3.13; CI checks that splunkd launched every input on 3.13. New releases
+support Splunk 10.4 and later. For an older Splunk, use the last release that
+supported it.
 
 ### Bug Fixes  
 1. #57 - Deduping removes some account data  
