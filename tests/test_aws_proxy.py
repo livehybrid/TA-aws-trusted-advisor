@@ -1,7 +1,8 @@
 """botocore_proxies: the Proxy tab's stanza as botocore's Config(proxies=...).
 
 Pure function, no Splunk. The end-to-end proof is tests/test_proxy.py; this
-pins the cases it does not run (SOCKS, a disabled stanza, an empty host).
+pins the cases it does not run (remote DNS, an unknown type, a disabled stanza,
+an empty host). tests/test_socks.py proves SOCKS end to end.
 """
 from __future__ import annotations
 
@@ -35,7 +36,21 @@ def test_off_or_incomplete_means_no_proxy():
     assert botocore_proxies({"proxy_enabled": "1", "proxy_url": " ", "proxy_port": "1"}) == {}
 
 
-def test_socks_is_reported_not_silently_dropped():
+def test_socks_types_give_socks_urls():
+    base = {"proxy_url": "socks.corp.example", "proxy_port": "1080", "proxy_rdns": "0"}
+    assert botocore_proxies({**base, "proxy_type": "socks5"})["https"] == "socks5://socks.corp.example:1080"
+    assert botocore_proxies({**base, "proxy_type": "socks4"})["http"] == "socks4://socks.corp.example:1080"
+
+
+def test_remote_dns_lets_the_proxy_resolve():
+    base = {"proxy_url": "s", "proxy_port": "1080", "proxy_rdns": "1"}
+    assert botocore_proxies({**base, "proxy_type": "socks5"})["https"] == "socks5h://s:1080"
+    assert botocore_proxies({**base, "proxy_type": "socks4"})["https"] == "socks4a://s:1080"
+    # Meaningless for an HTTP proxy, which always resolves the target itself.
+    assert botocore_proxies({**base, "proxy_type": "http"})["https"] == "http://s:1080"
+
+
+def test_unknown_type_is_reported_not_silently_dropped():
     warned = []
-    assert botocore_proxies({"proxy_url": "p", "proxy_type": "socks5"}, warn=warned.append) == {}
-    assert warned and "socks5" in warned[0]
+    assert botocore_proxies({"proxy_url": "p", "proxy_type": "ftp"}, warn=warned.append) == {}
+    assert warned and "ftp" in warned[0]

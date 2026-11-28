@@ -7,3 +7,6 @@
 splunktaucclib>=8.2.0
 solnlib>=5.5.0
 splunk-sdk>=2.1.1,<3.0.0
+# SOCKS proxies (urllib3.contrib.socks, see bin/botocore_socks.py). Pure Python;
+# splunktaucclib pulls it in today, pinned here so it cannot silently drop out.
+PySocks>=1.7.1

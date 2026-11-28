@@ -29,6 +29,8 @@ services:
         condition: service_healthy
       proxy:
         condition: service_healthy
+      socks:
+        condition: service_healthy
 
   # Mock AWS Support (Trusted Advisor) API for the end-to-end data test.
   # Splunk reaches it as http://mockaws:8080 through the add-on's endpoint
@@ -55,3 +57,11 @@ services:
     build: ./proxy
     container_name: ta_aws_trusted_advisor_proxy
     hostname: proxy
+
+  socks:
+    # Dante SOCKS server for tests/test_socks.py: 1080 SOCKS4/5 without
+    # authentication, 1081 SOCKS5 with user name and password. Its log
+    # (stdout) shows each connection it relayed. Not published.
+    build: ./socks
+    container_name: ta_aws_trusted_advisor_socks
+    hostname: socks

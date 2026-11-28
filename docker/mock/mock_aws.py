@@ -39,7 +39,8 @@ reached the wire. AssumeRole entries also record the credentials issued.
 
 Every recorded call also carries `client` (the address it came from: the
 proxy's container when a proxy relayed it, Splunk's when it came direct) and
-`tls` (whether it arrived on the HTTPS port).
+`tls` (whether it arrived on the HTTPS port) and `path` (the request target as
+received).
 
 HTTPS: when /mock/tls/cert.pem and key.pem exist (CI writes a throwaway
 self-signed pair for the name "mockaws"), the same handler also listens with
@@ -568,7 +569,8 @@ class Handler(BaseHTTPRequestHandler):
         entry = {"protocol": proto, "service": prefix, "operation": op,
                  "params": _plain(params), "access_key_id": key_id,
                  "signing_service": signing_service, "session_token": token,
-                 "client": self.client_address[0], "tls": isinstance(self.connection, ssl.SSLSocket)}
+                 "client": self.client_address[0], "tls": isinstance(self.connection, ssl.SSLSocket),
+                 "path": self.path}
         with LOCK:
             REQUESTS.append(entry)
 
