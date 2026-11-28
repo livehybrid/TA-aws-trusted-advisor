@@ -41,6 +41,11 @@ services:
     command: ["python", "-u", "/mock/mock_aws.py"]
     volumes:
       - ./mock:/mock:ro
+    networks:
+      default: {}
+      remote_only:
+        # A name only the SOCKS server can resolve (tests/test_socks.py, remote DNS).
+        aliases: [mockaws-remote]
     ports:
       - "8080:8080"
     healthcheck:
@@ -65,3 +70,10 @@ services:
     build: ./socks
     container_name: ta_aws_trusted_advisor_socks
     hostname: socks
+    networks: [default, remote_only]
+
+networks:
+  default: {}
+  # Dante and the mock only; Splunk is not on it.
+  remote_only:
+    internal: true

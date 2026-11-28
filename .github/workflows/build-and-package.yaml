@@ -90,7 +90,7 @@ jobs:
           # are https, so tests/test_proxy.py needs the CONNECT path too.
           mkdir -p docker/mock/tls
           openssl req -x509 -newkey rsa:2048 -nodes -days 2 -subj "/CN=mockaws" \
-            -addext "subjectAltName=DNS:mockaws" \
+            -addext "subjectAltName=DNS:mockaws,DNS:mockaws-remote" \
             -keyout docker/mock/tls/key.pem -out docker/mock/tls/cert.pem
           chmod 644 docker/mock/tls/*.pem
           chmod -R 777 stage/TA-aws-trusted-advisor
